@@ -19,6 +19,22 @@ except ImportError:
     from neo4j_connector import is_neo4j_available, get_connector
     from graph_builder import GraphBuilder
 
+
+# Load project .env and FORCE override parent environment
+def _load_project_env():
+    """Load project .env and override parent environment variables"""
+    from pathlib import Path
+    env_file = Path(__file__).parent.parent / ".env"
+    if env_file.exists():
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if "=" in line and not line.startswith("#"):
+                    key, val = line.split("=", 1)
+                    os.environ[key] = val  # FORCE override
+
+_load_project_env()
+
 logger = logging.getLogger(__name__)
 
 # Global retriever instance (lazy initialization)
