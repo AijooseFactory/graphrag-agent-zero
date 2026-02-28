@@ -22,153 +22,263 @@ GraphRAG for Agent Zero enhances the agent's retrieval capabilities by combining
 - ✅ **Zero Regressions**: Feature flag OFF by default, golden tests ensure baseline compatibility
 - ✅ **Easy Install**: Docker Compose profile or simple config change
 
+---
+
 ## Quick Start
 
-### Prerequisites
+### 1. Prerequisites
 
 - Agent Zero running in Docker
 - Neo4j 5.x (optional, for GraphRAG features)
+- Python 3.10+
 
-### Installation
+### 2. Start Neo4j (Dedicated Instance)
+
+```bash
+# Start dedicated Neo4j for GraphRAG (unique ports 7475/7688)
+docker-compose -f docker-compose.neo4j.yml up -d
+
+# Verify Neo4j is running
+curl http://localhost:7475
+```
+
+### 3. Enable GraphRAG
+
+```bash
+# Set environment variable
+export GRAPH_RAG_ENABLED=true
+
+# Or edit .env file
+GRAPH_RAG_ENABLED=true
+```
+
+### 4. Run Tests
+
+```bash
+# Golden tests (verify no regressions)
+python tests/golden/test_baseline.py
+
+# Benchmark runner
+python scripts/run_benchmark.py --mode compare
+```
+
+---
+
+## Installation Options
+
+### Option A: Docker Compose Profile
+
+```yaml
+# Add to your Agent Zero docker-compose.yml
+services:
+  agent-zero:
+    # ... existing config ...
+    environment:
+      - GRAPH_RAG_ENABLED=true
+      - NEO4J_URI=bolt://graphrag-neo4j:7687
+  
+  graphrag-neo4j:
+    image: neo4j:5.15-community
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/graphrag123dev
+```
+
+### Option B: Manual Configuration
 
 ```bash
 # Clone the repository
 git clone https://github.com/AijooseFactory/graphrag-agent-zero.git
-cd graphrag-agent-zero
 
-# Copy to Agent Zero extensions
-cp -r lib/* /path/to/agent-zero/python/helpers/
-cp -r tools/* /path/to/agent-zero/python/tools/
+# Install dependencies
+pip install neo4j>=5.0.0
+
+# Configure environment
+cp .env.graphrag .env
+# Edit .env and set GRAPH_RAG_ENABLED=true
 ```
 
-### Configuration
+---
 
-Enable GraphRAG in your Agent Zero configuration:
+## Architecture
 
-```json
-{
-  "graph_rag": {
-    "enabled": true,
-    "neo4j_uri": "bolt://neo4j:7687",
-    "neo4j_user": "neo4j",
-    "neo4j_password": "your_password",
-    "max_hops": 2,
-    "query_timeout_ms": 5000
-  }
-}
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Agent Zero Core                       │
+└─────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────┐
+│              Extension Hook (extension_hook.py)          │
+│                                                          │
+│  if GRAPH_RAG_ENABLED and Neo4j available:              │
+│      → HybridRetriever (vector + graph)                 │
+│  else:                                                   │
+│      → Baseline retrieval unchanged                     │
+└─────────────────────────────────────────────────────────┘
+                           │
+           ┌───────────────┴───────────────┐
+           ▼                               ▼
+┌──────────────────────┐      ┌──────────────────────┐
+│   Neo4j Connector    │      │   Graph Builder      │
+│  (timeouts/retries)  │      │  (entity extraction) │
+└──────────────────────┘      └──────────────────────┘
+           │                               │
+           └───────────────┬───────────────┘
+                           ▼
+                  ┌─────────────────┐
+                  │    Neo4j DB     │
+                  │  (ports 7475/   │
+                  │   7688)         │
+                  └─────────────────┘
 ```
 
-### Docker Compose
+---
 
-```yaml
-# docker-compose.yml addition
-services:
-  neo4j:
-    image: neo4j:5.15
-    ports:
-      - "7474:7474"
-      - "7687:7687"
-    environment:
-      NEO4J_AUTH: neo4j/your_password
-    profiles:
-      - graphrag
+## Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GRAPH_RAG_ENABLED` | `false` | Enable/disable GraphRAG |
+| `NEO4J_URI` | `bolt://localhost:7688` | Neo4j Bolt URI |
+| `NEO4J_HTTP_URI` | `http://localhost:7475` | Neo4j HTTP UI |
+| `NEO4J_USER` | `neo4j` | Neo4j username |
+| `NEO4J_PASSWORD` | `graphrag123dev` | Neo4j password |
+| `NEO4J_QUERY_TIMEOUT_MS` | `10000` | Query timeout (ms) |
+| `GRAPH_EXPAND_MAX_HOPS` | `2` | Max graph traversal depth |
+| `GRAPH_EXPAND_LIMIT` | `100` | Max entities to expand |
+
+---
+
+## API Reference
+
+### Extension Hook
+
+```python
+from src import enhance_retrieval, is_enabled, health_check
+
+# Check if enabled
+if is_enabled():
+    # Enhance retrieval with graph
+    result = enhance_retrieval(
+        query="What caused the outage?",
+        vector_results=vector_results,
+        top_k=10
+    )
+    
+    print(result["text"])  # Enhanced context
+    print(result["sources"])  # ["INC-001", "MEETING-2026-02-15"]
+    print(result["entities"])  # ["Service-A", "Component-X"]
+
+# Health check
+status = health_check()
+# {"enabled": true, "neo4j_available": true, ...}
 ```
 
-```bash
-# Start with GraphRAG support
-docker-compose --profile graphrag up -d
-```
+---
 
 ## Benchmark Results
 
-### Baseline (GraphRAG Disabled)
+### Baseline (GraphRAG OFF)
 
 | Metric | Value |
 |--------|-------|
-| Accuracy Score | 51.79% |
-| Provenance Score | 74.07% |
+| Accuracy | 51.79% |
+| Provenance | 74.07% |
 | Hallucination Penalty | 0.00% |
 | P95 Latency | 0.04ms |
 
-### GraphRAG Enabled
+### Target (GraphRAG ON)
 
-*Run `scripts/baseline_benchmark.py` after enabling GraphRAG to compare.*
+| Metric | Target | Constraint |
+|--------|--------|------------|
+| Accuracy | >60% | Improvement required |
+| Provenance | >85% | Must improve |
+| Hallucination Penalty | 0% | No increase |
+| P95 Latency | ≤2x baseline | Performance bound |
 
-## Project Structure
+---
+
+## Safety Guarantees
+
+1. **Feature Flag OFF by Default** - No changes to baseline behavior
+2. **No Core Patches** - Uses extension hook pattern only
+3. **Graceful Fallback** - Returns baseline if Neo4j unavailable
+4. **Safe Cypher** - Allowlisted queries only, no arbitrary LLM-generated Cypher
+5. **Bounded Queries** - Max 2 hops, LIMIT enforced, timeouts applied
+
+---
+
+## Development
+
+### Run Tests
+
+```bash
+# Golden tests
+python tests/golden/test_baseline.py
+
+# Unit tests
+pytest tests/
+
+# Benchmark
+python scripts/run_benchmark.py --mode compare
+```
+
+### Project Structure
 
 ```
 graphrag-agent-zero/
 ├── benchmark/
-│   ├── BENCHMARK_PLAN.md      # Benchmark methodology and scoring
-│   ├── benchmark_questions.json # Test questions with answer keys
-│   ├── corpus/                # Test documents (12 docs)
-│   └── SAFE_CYPHER_TEMPLATES.md # Allowlisted Cypher queries
+│   ├── BENCHMARK_PLAN.md
+│   ├── benchmark_questions.json
+│   ├── corpus/           # 12 test documents
+│   └── SAFE_CYPHER_TEMPLATES.md
+├── config/
+│   ├── graphrag_settings.py
+│   └── neo4j_config.json
 ├── docs/
-│   └── IMPLEMENTATION_PLAN.md # Detailed implementation roadmap
+│   └── IMPLEMENTATION_PLAN.md
 ├── scripts/
-│   └── baseline_benchmark.py  # Benchmark runner
-├── src/                       # GraphRAG implementation
-├── tests/                     # E2E and golden tests
-├── config/                    # Configuration templates
+│   ├── baseline_benchmark.py
+│   └── run_benchmark.py
+├── src/
+│   ├── __init__.py
+│   ├── extension_hook.py    # Main integration point
+│   ├── hybrid_retrieve.py   # Vector + graph retrieval
+│   ├── neo4j_connector.py   # Neo4j connection management
+│   └── graph_builder.py     # Entity extraction
+├── tests/
+│   ├── golden/             # Baseline compatibility tests
+│   └── e2e/                # End-to-end tests
+├── docker-compose.neo4j.yml
+├── docker-compose.bench.yml
+├── .env
 └── README.md
 ```
 
-## Implementation Phases
-
-### PR #1: MVP
-- Neo4j connector with timeouts/retries
-- Hybrid retrieval tool
-- Extension hook injection
-- Feature flag (OFF by default)
-- Graceful fallback
-
-### PR #2: Migration
-- Knowledge base entity extraction
-- Neo4j ingestion pipeline
-- Incremental sync
-
-### PR #3: Optimization
-- Query result caching
-- Batch processing
-- Performance tuning
-
-## Development
-
-### Running Benchmarks
-
-```bash
-# Baseline benchmark (GraphRAG disabled)
-python scripts/baseline_benchmark.py
-
-# Results saved to results/baseline_*.json
-```
-
-### Running Tests
-
-```bash
-# E2E tests
-pytest tests/e2e/
-
-# Golden tests (baseline compatibility)
-pytest tests/golden/
-```
-
-## Constraints
-
-- **No auto-installation** of Docker/Neo4j
-- **No arbitrary Cypher** from LLM
-- **No baseline behavior changes** when disabled
-- **Persistence only** under `/a0/usr`
-- **Graceful degradation** if Neo4j fails
+---
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file.
+MIT License - See [LICENSE](LICENSE) for details.
+
+---
 
 ## Contributing
 
-Contributions welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md).
+1. Fork the repository
+2. Create a feature branch
+3. Run tests: `python tests/golden/test_baseline.py`
+4. Submit a pull request
 
-## Acknowledgments
+---
 
-Built for [Agent Zero](https://github.com/AgentZeroAI/agent-zero) by [Ai joose Factory](https://github.com/AijooseFactory).
+## Credits
+
+- Built for [Agent Zero](https://github.com/AgentZeroAI/agent-zero)
+- Powered by [Neo4j](https://neo4j.com/)
+- Part of [Ai joose Factory](https://github.com/AijooseFactory)
