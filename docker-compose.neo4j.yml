@@ -1,0 +1,49 @@
+# GraphRAG for Agent Zero - Dedicated Neo4j Instance
+# UNIQUE container name and ports to avoid conflicts with macs-graphrag
+# 
+# Usage:
+#   docker-compose -f docker-compose.neo4j.yml up -d
+#   docker-compose -f docker-compose.neo4j.yml down
+#
+# Ports:
+#   - 7475:7474 (HTTP UI)
+#   - 7688:7687 (Bolt)
+
+version: '3.8'
+
+services:
+  graphrag-neo4j:
+    image: neo4j:5.15-community
+    container_name: graphrag-agent-zero-neo4j
+    restart: unless-stopped
+    
+    ports:
+      # UNIQUE ports to avoid conflicts with macs-graphrag
+      - "7475:7474"  # HTTP UI
+      - "7688:7687"  # Bolt protocol
+    
+    environment:
+      - NEO4J_AUTH=neo4j/graphrag123dev
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_memory_pagecache_size=256M
+      - NEO4J_dbms_memory_heap_initial__size=512M
+      - NEO4J_dbms_memory_heap_max__size=1G
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_security_allow__csv__import__from__file__urls=true
+    
+    volumes:
+      - graphrag-neo4j-data:/data
+      - graphrag-neo4j-logs:/logs
+      - graphrag-neo4j-import:/var/lib/neo4j/import
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  graphrag-neo4j-data:
+  graphrag-neo4j-logs:
+  graphrag-neo4j-import:

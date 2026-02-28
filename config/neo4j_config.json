@@ -1,0 +1,12 @@
+{
+  "uri": "bolt://localhost:7688",
+  "http_uri": "http://localhost:7475",
+  "user": "neo4j",
+  "password": "graphrag123dev",
+  "database": "neo4j",
+  "connection_timeout_ms": 5000,
+  "max_connection_pool_size": 50,
+  "connection_acquisition_timeout_ms": 10000,
+  "max_transaction_retry_time_ms": 30000,
+  "note": "Dedicated Neo4j for graphrag-agent-zero - ports 7475/7688 avoid macs-graphrag conflicts"
+}
