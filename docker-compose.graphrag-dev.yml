@@ -1,0 +1,113 @@
+# GraphRAG for Agent Zero - Isolated Dev Stack
+#
+# IMPORTANT: This stack is FULLY ISOLATED from production:
+# - Unique volume names (graphrag_a0_usr, graphrag_neo4j_data)
+# - Unique ports (8087, 7475, 7688) to avoid conflicts
+# - COMPOSE_PROJECT_NAME=graphrag_agent_zero_dev
+# - No shared volumes with production Agent Zero
+#
+# Usage:
+#   cd /path/to/graphrag-agent-zero
+#   docker compose -f docker-compose.graphrag-dev.yml up -d --build
+#
+# Access:
+#   - Agent Zero: http://localhost:8087
+#   - Neo4j HTTP: http://localhost:7475
+#   - Neo4j Bolt: bolt://localhost:7688
+
+version: '3.8'
+
+# Unique project name to avoid namespace collisions
+name: graphrag_agent_zero_dev
+
+services:
+  # GraphRAG-enabled Agent Zero dev container
+  agent-zero-graphrag-dev:
+    build:
+      context: ./agent-zero-fork
+      dockerfile: Dockerfile
+    image: agentzero/graphrag-dev:latest
+    container_name: agent-zero-graphrag-dev
+    ports:
+      # Host 8087 -> Container 80 (internal port matches upstream)
+      - "8087:80"
+    environment:
+      # Feature flag OFF by default - PR requirement
+      - GRAPH_RAG_ENABLED=false
+      # Connect to host Ollama (same as production)
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      # Neo4j connection for graph retrieval
+      - NEO4J_URI=bolt://neo4j-bench:7687
+      - NEO4J_HTTP_URI=http://neo4j-bench:7474
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=graphrag2026
+      - NEO4J_DATABASE=neo4j
+      # Timeouts and limits
+      - NEO4J_CONNECTION_TIMEOUT_MS=5000
+      - NEO4J_QUERY_TIMEOUT_MS=10000
+      - GRAPH_EXPAND_MAX_HOPS=2
+      - GRAPH_EXPAND_LIMIT=100
+      - GRAPH_MAX_RESULTS=50
+    volumes:
+      # UNIQUE volume - does NOT share with production
+      - graphrag_a0_usr:/a0/usr
+    depends_on:
+      neo4j-bench:
+        condition: service_healthy
+    profiles:
+      - dev
+      - benchmark
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Neo4j benchmark database (isolated from production Neo4j)
+  neo4j-bench:
+    image: neo4j:5.15-community
+    container_name: neo4j-bench
+    ports:
+      # Host 7475 -> Container 7474 (HTTP) - unique port
+      - "7475:7474"
+      # Host 7688 -> Container 7687 (Bolt) - unique port
+      - "7688:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/graphrag2026
+      - NEO4J_server_memory_pagecache_size=256M
+      - NEO4J_server_memory_heap_initial__size=512M
+      - NEO4J_server_memory_heap_max__size=1G
+      # Disable authentication for local dev (remove in production)
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_security_procedures_allowlist=apoc.*
+    volumes:
+      # UNIQUE volume - does NOT share with production Neo4j
+      - graphrag_neo4j_data:/data
+      - graphrag_neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    profiles:
+      - dev
+      - graphrag
+      - benchmark
+    restart: unless-stopped
+
+# Unique volume names - NOT shared with production
+volumes:
+  graphrag_a0_usr:
+    name: graphrag_agent_zero_a0_usr
+  graphrag_neo4j_data:
+    name: graphrag_agent_zero_neo4j_data
+  graphrag_neo4j_logs:
+    name: graphrag_agent_zero_neo4j_logs
+
+# Networks for isolation
+networks:
+  default:
+    name: graphrag_agent_zero_network
