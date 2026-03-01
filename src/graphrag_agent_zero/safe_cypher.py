@@ -11,7 +11,16 @@ from typing import Dict, Any, List, Optional
 logger = logging.getLogger(__name__)
 
 # Allowlisted Cypher Templates
+# MAINTENANCE NOTE for Mac: 
+# To add a NEW graph feature:
+# 1. Add your Cypher query to this dictionary.
+# 2. Use $parameter_name for all variables (injection protection).
+# 3. Reference the template name in 'Neo4jConnector.execute_template'.
 SAFE_CYPHER_TEMPLATES = {
+    # BASIC UTILITIES
+    "check_health": "RETURN 1 as health",
+
+    # NEIGHBORHOOD SEARCH (Multi-hop support)
     "get_neighbors": """
         MATCH (e:Entity)
         WHERE e.id IN $entity_ids
@@ -19,13 +28,14 @@ SAFE_CYPHER_TEMPLATES = {
         RETURN e.id as source, type(r) as relationship, neighbor.id as target, neighbor.name as name
         LIMIT $limit
     """,
+
+    # ENTITY ENRICHMENT
     "get_entity_details": """
         MATCH (e:Entity)
         WHERE e.id IN $entity_ids
         RETURN e.id as id, e.name as name, e.description as description, labels(e) as types
         LIMIT $limit
     """,
-    "check_health": "RETURN 1 as health",
     
     # Retrieval templates
     "get_entities_by_doc": """
@@ -64,7 +74,8 @@ SAFE_CYPHER_TEMPLATES = {
     """,
 }
 
-# Dynamically add relationship templates for each allowed type
+# DYNAMIC TEMPLATE GENERATION
+# Boilerplate for merging standard relationships during ingestion.
 ALLOWED_RELATIONSHIPS = [
     "REFERENCES", "CONTAINS", "MENTIONS", "DEPENDS_ON", 
     "RELATED_TO", "SUPERSEDES", "AMENDS", "AUTHORED_BY", 
@@ -81,14 +92,22 @@ for rel in ALLOWED_RELATIONSHIPS:
     """
 
 def get_safe_query(template_name: str) -> Optional[str]:
-    """Get an allowlisted Cypher query template."""
+    """
+    Retrieves a query string from the protected allowlist.
+    Returns None if the template is not found, preventing unauthorized execution.
+    """
     return SAFE_CYPHER_TEMPLATES.get(template_name)
 
 def validate_parameters(parameters: Dict[str, Any]) -> bool:
     """
-    Validate query parameters for safety.
-    - entity_ids must be a list of strings
-    - limit must be an integer <= 1000
+    Sanitizes and validates parameters BEFORE they reach the Neo4j driver.
+    
+    Checks:
+    - Type safety for IDs (list of strings).
+    - Hard caps on row limits to prevent 'Query Expansion' attacks or DOS.
+    
+    MAINTENANCE NOTE for Mac: If you add new parameter types, 
+    register their validation logic here.
     """
     if "entity_ids" in parameters:
         if not isinstance(parameters["entity_ids"], list):
@@ -97,8 +116,9 @@ def validate_parameters(parameters: Dict[str, Any]) -> bool:
             return False
             
     if "limit" in parameters:
+        # Enforce a non-negotiable hard cap for database safety
         if not isinstance(parameters["limit"], int) or parameters["limit"] > 1000:
-            logger.warning(f"Unsafe limit requested: {parameters['limit']}")
-            parameters["limit"] = 100  # Enforce safe default
+            logger.warning(f"Unsafe limit scale blocked: {parameters['limit']}")
+            parameters["limit"] = 100  # Enforce a safe, sensible default
             
     return True

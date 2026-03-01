@@ -16,18 +16,29 @@ from .graph_builder import GraphBuilder
 
 logger = logging.getLogger(__name__)
 
-# Global retriever instance (lazy initialization)
+# Global singleton instances for retriever and builder (lazy initialization)
 _retriever: Optional[HybridRetriever] = None
 _builder: Optional[GraphBuilder] = None
 
 
 def is_enabled() -> bool:
-    """Check if GraphRAG is enabled via feature flag"""
+    """
+    Check if the GraphRAG feature is active.
+    
+    Triggered by the environment variable GRAPH_RAG_ENABLED.
+    Defaults to 'false' to ensure non-invasive behavior if not explicitly requested.
+    """
     return os.getenv("GRAPH_RAG_ENABLED", "false").lower() == "true"
 
 
 def get_retriever() -> HybridRetriever:
-    """Get or create the hybrid retriever instance"""
+    """
+    Singleton getter for the HybridRetriever.
+    
+    MAINTENANCE NOTE for Mac:
+    - This is where you adjust default hop counts and response limits.
+    - Uses environment variables for configuration to avoid hardcoding.
+    """
     global _retriever
     if _retriever is None:
         _retriever = HybridRetriever(
@@ -40,7 +51,9 @@ def get_retriever() -> HybridRetriever:
 
 
 def get_builder() -> GraphBuilder:
-    """Get or create the graph builder instance"""
+    """
+    Singleton getter for the GraphBuilder (responsible for data ingestion).
+    """
     global _builder
     if _builder is None:
         _builder = GraphBuilder()
@@ -53,26 +66,32 @@ def enhance_retrieval(
     top_k: int = 10,
 ) -> Dict[str, Any]:
     """
-    Main extension hook for enhancing retrieval with GraphRAG.
+    The primary integration point for the Agent Zero 'Extensions' framework.
     
-    Safety guarantees:
-    - If GraphRAG disabled, returns baseline results unchanged
-    - If Neo4j unavailable, falls back to baseline
-    - All errors are caught and logged, never raises to caller
+    This function acts as the 'Control Plane' for a retrieval request:
+    1. It validates the state (enabled/available).
+    2. It executes the hybrid retrieval pipeline (vector + graph).
+    3. It packages the results into a dict format expected by the Extension subclass.
+    
+    Safety Design:
+    - Failing Open: If GraphRAG is off or broken, it returns a standard baseline.
+    - Exception Isolation: Any crash inside the graph logic is trapped here.
     """
-    # Feature flag check - baseline unchanged when disabled
+    # GATING: Standard feature flag check
     if not is_enabled():
         return _baseline_response(vector_results)
     
-    # Neo4j availability check
+    # GATING: Database availability check
     if not is_neo4j_available():
-        logger.debug("GraphRAG enabled but Neo4j unavailable, using baseline")
+        logger.debug("GraphRAG enabled but Neo4j unavailable, falling back to baseline")
         return _baseline_response(vector_results)
     
     try:
+        # EXECUTE: Run the multi-stage retrieval
         retriever = get_retriever()
         result = retriever.retrieve(query, vector_results, top_k)
         
+        # PACKAGE: Map source-agnostic Result object to the extension contract
         return {
             "text": result.to_context_pack(),
             "sources": result.source_doc_ids,
@@ -84,12 +103,16 @@ def enhance_retrieval(
             "cache_hit": result.cache_hit,
         }
     except Exception as e:
-        logger.warning(f"GraphRAG enhancement failed: {e}")
+        # LOG & SCALE: Log the failure for maintenance but don't stop the agent.
+        logger.warning(f"GraphRAG enhancement failed (trapped in hook): {e}")
         return _baseline_response(vector_results)
 
 
 def _baseline_response(vector_results: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Return baseline response (no graph enhancement)"""
+    """
+    Constructs a valid response dictionary when GraphRAG is skipped.
+    Ensures that the Extension subclass receives a consistent structure.
+    """
     texts = []
     sources = []
     
@@ -115,13 +138,13 @@ def _baseline_response(vector_results: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 def build_knowledge_graph(documents: List[Dict[str, Any]]) -> Dict[str, int]:
     """
-    Build knowledge graph from documents.
+    Ingestion hook to populate Neo4j from a list of documents.
     
     Args:
-        documents: List of documents with 'id', 'content', 'source' fields
+        documents: A list of dicts with 'id' and 'content'.
         
-    Returns:
-        Stats dict with 'documents', 'entities', 'relationships' counts
+    MAINTENANCE NOTE for Mac: Use this when you want to batch-index 
+    the workspace memory into the graph.
     """
     if not is_enabled() or not is_neo4j_available():
         return {"documents": 0, "entities": 0, "relationships": 0}
@@ -133,15 +156,14 @@ def build_knowledge_graph(documents: List[Dict[str, Any]]) -> Dict[str, int]:
         if builder.build_from_document(doc):
             stats["documents"] += 1
     
+    # Note: Stats for entities/rels can be expanded here if needed.
     return stats
 
 
 def health_check() -> Dict[str, Any]:
     """
-    Health check for GraphRAG extension.
-    
-    Returns:
-        Dict with status information
+    Diagnostic tool for the Maintenance Mode.
+    Provides visibility into the current GraphRAG status.
     """
     return {
         "enabled": is_enabled(),

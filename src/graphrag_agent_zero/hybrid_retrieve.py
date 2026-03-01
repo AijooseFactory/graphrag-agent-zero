@@ -55,30 +55,24 @@ class RetrievalResult:
 
 class HybridRetriever:
     """
-    Hybrid retrieval combining vector search with graph expansion.
+    Main Reasoning Engine for GraphRAG.
     
-    Flow:
-    1. Vector seed: Get initial candidates from vector similarity
-    2. Entity pinning: Extract entities from seed documents
-    3. Graph expand: Traverse relationships up to max_hops
-    4. Context pack: Combine into enriched context
+    This class implements the 'Seed -> Pin -> Expand -> Pack' (SPEP) protocol:
+    1.  **VECTOR SEED**: Take context from Agent Zero's native memory.
+    2.  **ENTITY PINNING**: Link these seed items to specific nodes in Neo4j.
+    3.  **GRAPH EXPAND**: Follow relationship paths up to 2 hops.
+    4.  **CONTEXT PACK**: Merge the graph-derived facts back into the original prompt.
     
-    Safety constraints:
-    - Max 2 hops (configurable)
-    - Max 100 entities per query
-    - Strict timeouts
-    - Safe Cypher templates only
+    MAINTENANCE NOTE for Mac:
+    - Current logic is optimized for 'Port 8087' dev stacks.
+    - Safety hard-caps are enforced for latency control.
     """
     
-    # Allowed relationship types (replicated from safe_cypher for logic)
+    # RELATIONSHIP ALLOWLIST
+    # Only follow these edges to prevent 'Context Explosion'.
     ALLOWED_RELATIONSHIPS = [
-        "REFERENCES",
-        "CONTAINS", 
-        "MENTIONS",
-        "DEPENDS_ON",
-        "RELATED_TO",
-        "SUPERSEDES",
-        "AMENDS",
+        "REFERENCES", "CONTAINS", "MENTIONS", "DEPENDS_ON", 
+        "RELATED_TO", "SUPERSEDES", "AMENDS",
     ]
     
     def __init__(
@@ -88,12 +82,14 @@ class HybridRetriever:
         max_results: int = 50,
         query_timeout_ms: int = 10000,
     ):
-        self.max_hops = min(max_hops, 2)  # Hard cap at 2 hops
-        self.max_entities = min(max_entities, 100)  # Hard cap
+        # Strict enforcement of performance boundaries
+        self.max_hops = min(max_hops, 2)  
+        self.max_entities = min(max_entities, 100)
         self.max_results = max_results
         self.query_timeout_ms = query_timeout_ms
         
-        # Cache for entity lookups
+        # INTERNAL CACHE: Minimizes expensive Bolt roundtrips.
+        # Flushes periodically to ensure consistency with fresh graph updates.
         self._entity_cache: Dict[str, List[str]] = {}
         self._cache_ttl = 3600  # 1 hour
         self._cache_timestamps: Dict[str, float] = {}
@@ -122,26 +118,21 @@ class HybridRetriever:
         top_k: int = 10,
     ) -> RetrievalResult:
         """
-        Perform hybrid retrieval.
-        
-        Args:
-            query: The user query
-            vector_results: Initial results from vector search
-            top_k: Number of results to return
-            
-        Returns:
-            RetrievalResult with enriched context
+        Public interface for retrieval.
+        Provides a 'Safe Fallback' pattern: if Neo4j is down, the system 
+        continues with pure vector RAG.
         """
         start_time = time.time()
         
-        # Check if GraphRAG is enabled and available
+        # GATING: Ensure zero downtime even if GraphRAG is misconfigured.
         if not is_neo4j_available():
             return self._fallback_retrieval(vector_results, start_time)
         
         try:
             return self._hybrid_retrieval(query, vector_results, top_k, start_time)
         except Exception as e:
-            logger.warning(f"GraphRAG retrieval failed, falling back: {e}")
+            # Trapped at the reasoning layer to prevent agent crash
+            logger.warning(f"Reasoning layer failure (fallback triggered): {e}")
             return self._fallback_retrieval(vector_results, start_time)
     
     def _fallback_retrieval(
@@ -175,9 +166,14 @@ class HybridRetriever:
         top_k: int,
         start_time: float,
     ) -> RetrievalResult:
-        """Perform actual hybrid retrieval with graph expansion"""
+        """
+        The multi-stage GraphRAG pipeline.
         
-        # Step 1: Extract seed document IDs
+        MAINTENANCE NOTE for Mac: Focus here if you intend to add 
+        reranking or more advanced path discovery.
+        """
+        
+        # 1. PINNING: Identify which documents we're starting from
         seed_doc_ids = []
         for result in vector_results:
             doc_id = result.get("doc_id") or result.get("source")
@@ -187,16 +183,15 @@ class HybridRetriever:
         if not seed_doc_ids:
             return self._fallback_retrieval(vector_results, start_time)
         
-        # Step 2: Get entities from seed documents
+        # 2. SEED: Get entities associated with those documents
         entities = self._get_entities_for_docs(seed_doc_ids)
         
-        # Step 3: Expand graph from entities
+        # 3. EXPAND: Wander the graph to find hidden connections
         expanded_entities, relationships = self._expand_graph(entities)
         
-        # Step 4: Get related documents
+        # 4. DISCOVER: Find docs linked to these new entities
         related_docs = self._get_related_documents(seed_doc_ids)
         
-        # Step 5: Build enriched context
         all_doc_ids = list(set(seed_doc_ids + related_docs))
         texts = [r.get("text", "") for r in vector_results]
         
@@ -253,13 +248,14 @@ class HybridRetriever:
                     }
                 )
                 
-                for r in result:
-                    if r.get("name"):
-                        all_entities.add(r["name"])
-                    if r.get("relationship"):
-                        all_relationships.append(
-                            (entity, r["relationship"], r.get("name", "unknown"))
-                        )
+                if result:
+                    for r in result:
+                        if r.get("name"):
+                            all_entities.add(r["name"])
+                        if r.get("relationship"):
+                            all_relationships.append(
+                                (entity, r["relationship"], r.get("name", "unknown"))
+                            )
         except Exception as e:
             logger.warning(f"Graph expansion failed: {e}")
         

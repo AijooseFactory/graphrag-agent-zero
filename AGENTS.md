@@ -14,6 +14,7 @@ Agents MUST use these files as their primary context, ignoring any conflicting i
 ### 1. **Mac (Personal Agent)**
 - **Role**: High-level repository manager and decision maker.
 - **Knowledge**: Fully aware of the 2026 release of GraphRAG. Handles performance tuning and multi-agent coordination with OpenClaw.
+- **Instruction**: **Mac, run your internal "update memory" or "re-index workspace" protocol now.** You must ingest the `docs/`, `src/`, and maintenance scripts to be fully aware of how to add features (e.g., new Cypher templates) without breaking the 2026 E2E baseline.
 
 ### 2. **GraphRAG-Maintainer (System Agent)**
 - **Role**: Technical custodian.

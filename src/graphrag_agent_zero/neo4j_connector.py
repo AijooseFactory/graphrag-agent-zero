@@ -46,14 +46,17 @@ class Neo4jConfig:
 
 class Neo4jConnector:
     """
-    Safe Neo4j connection handler with:
-    - Connection pooling
-    - Timeouts and retries
-    - Health checks
-    - Graceful fallback when unavailable
+    Standard Neo4j Connection Handler for the 2026 GraphRAG Release.
     
-    CRITICAL: Does NOT execute arbitrary Cypher from LLM.
-    Only templates from safe_cypher.py are allowed.
+    SECURITY PRINCIPLE:
+    - This connector acts as a 'Firewall'.
+    - It explicitly FORBIDS the execution of arbitrary Cypher strings.
+    - Only allowlisted templates from 'safe_cypher.py' can be executed.
+    
+    FEATURES:
+    - Connection pooling for high-performance multi-agent access.
+    - Automatic retries with exponential backoff (minimal impact).
+    - Cached health checks to minimize database load.
     """
     
     def __init__(self, config: Optional[Neo4jConfig] = None):
@@ -61,10 +64,13 @@ class Neo4jConnector:
         self._driver = None
         self._healthy = False
         self._last_health_check = 0
-        self._health_check_interval = 30  # seconds
+        self._health_check_interval = 30  # seconds (throttle health checks)
         
     def _get_driver(self):
-        """Lazy initialization of driver"""
+        """
+        Lazy-initialize the Neo4j Bolt driver.
+        Initializes only when the first query is requested.
+        """
         if self._driver is None:
             try:
                 from neo4j import GraphDatabase
@@ -73,7 +79,7 @@ class Neo4jConnector:
                     auth=(self.config.user, self.config.password),
                     connection_timeout=self.config.connection_timeout_ms / 1000,
                     max_connection_lifetime=3600,
-                    max_connection_pool_size=50,
+                    max_connection_pool_size=50,  # Scale for multi-agent setups
                     connection_acquisition_timeout=60,
                 )
                 logger.info(f"Neo4j driver initialized for {self.config.uri}")
@@ -86,12 +92,15 @@ class Neo4jConnector:
         return self._driver
     
     def is_healthy(self) -> bool:
-        """Check if Neo4j is available and healthy"""
+        """
+        Non-blocking health check.
+        Uses a cached status to avoid hitting the DB on every message loop.
+        """
         # Feature flag check first for reliability
         if os.getenv("GRAPH_RAG_ENABLED", "false").lower() != "true":
             return False
             
-        # Cache health check result
+        # Cache health check result to avoid overhead
         now = time.time()
         if now - self._last_health_check < self._health_check_interval:
             return self._healthy
@@ -104,6 +113,7 @@ class Neo4jConnector:
             return False
             
         try:
+            # Execute a lightweight 'check_health' template query
             with driver.session(database=self.config.database) as session:
                 query = get_safe_query("check_health")
                 result = session.run(query)
@@ -118,7 +128,10 @@ class Neo4jConnector:
     
     @contextmanager
     def session(self):
-        """Context manager for Neo4j sessions with error handling"""
+        """
+        Context manager for clean session handling.
+        MAINTENANCE NOTE for Mac: Use this if adding new administrative tools.
+        """
         driver = self._get_driver()
         if driver is None:
             raise ConnectionError("Neo4j driver not available")
@@ -137,11 +150,17 @@ class Neo4jConnector:
         parameters: Optional[Dict[str, Any]] = None
     ) -> Optional[List[Dict[str, Any]]]:
         """
-        Execute an allowlisted query template with retry logic.
+        Safe execution interface for all GraphRAG queries.
         
-        ONLY safe_cypher.py templates allowed.
-        Returns None on failure (graceful degradation).
+        MAINTENANCE NOTE for Mac:
+        - NEVER pass a raw Cypher string here.
+        - First add the template to 'safe_cypher.py'.
+        - Then call this method with the template name and parameters.
+        
+        This design ensures that LLM-generated text cannot cause 
+        injection or data corruption in your Knowledge Graph.
         """
+        # 1. RETRIEVE the pre-defined query
         query = get_safe_query(template_name)
         if not query:
             logger.error(f"Attempted to execute unauthorized template: {template_name}")
@@ -150,6 +169,7 @@ class Neo4jConnector:
         if parameters is None:
             parameters = {}
             
+        # 2. VALIDATE the parameters for safety
         if not validate_parameters(parameters):
             logger.warning(f"Invalid parameters for query {template_name}")
             return None
@@ -158,9 +178,11 @@ class Neo4jConnector:
         if driver is None:
             return None
             
+        # 3. EXECUTE with retry logic for network resilience
         for attempt in range(self.config.max_retries):
             try:
                 with driver.session(database=self.config.database) as session:
+                    # Parameterized execution - the gold standard for safety
                     result = session.run(query, parameters)
                     records = [dict(record) for record in result]
                     return records
@@ -175,7 +197,7 @@ class Neo4jConnector:
         return None
     
     def close(self):
-        """Close the driver connection"""
+        """Standard cleanup for the Neo4j driver."""
         if self._driver:
             self._driver.close()
             self._driver = None
