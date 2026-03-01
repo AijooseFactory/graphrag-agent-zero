@@ -29,7 +29,7 @@ When graph expansion is used, retrieved context can include relationship evidenc
 
 ---
 
-## Business Value: The "Expert" Agent
+## Use Cases:
 By adding Hybrid GraphRAG, Agent Zero goes beyond simple task automation. It becomes an **Institutional Expert** that understands the deep relationships within your private data—making it significantly more effective for:
 - **Complex Software Engineering** (Dependency analysis, bug impact)
 - **Scientific Research** (Connection discovery)
