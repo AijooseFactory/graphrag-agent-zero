@@ -1,36 +1,43 @@
-# Byte-compiled / optimized / DLL files
+# Version Control
+.git/
+.gitignore
+.github/
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
-
-# Environment variables
-.env
-.env.local
-
-# Virtual environments
-venv/
-env/
 .venv/
+env/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
-# IDE files
-.vscode/
-.idea/
+# Node / Playwright
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
-# Docker
-.docker/
+# Docker / Agent Zero Persistency
+dev/.env
+agent-zero-fork/.env
+.env
+**/usr/workdir/**
+**/usr/settings.json
+**/usr/memory/**
+**/usr/knowledge/**
 
-# Benchmarking / Data
-benchmark/corpus/
-benchmark/results/
-graphrag_neo4j_data/
-graphrag_neo4j_logs/
-graphrag_a0_usr/
+# Artifacts & Process Logs
+.gemini/
+brain/
+results/
+walkthrough.md
+IMPLEMENTATION_PLAN.md
+TASK.md
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db

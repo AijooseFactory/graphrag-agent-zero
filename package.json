@@ -1,0 +1,12 @@
+{
+    "name": "graphrag-agent-zero-e2e",
+    "version": "1.0.0",
+    "description": "E2E Playwright tests for GraphRAG Agent Zero",
+    "scripts": {
+        "test:ui": "playwright test tests/e2e/playwright",
+        "test:ui:headed": "playwright test tests/e2e/playwright --headed"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.40.0"
+    }
+}
