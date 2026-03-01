@@ -1,0 +1,412 @@
+{
+  "timestamp": "2026-02-28T00:11:22.939603",
+  "graphrag_enabled": false,
+  "configuration": {
+    "total_questions": 20,
+    "total_runs": 10,
+    "warmup_runs": 1,
+    "sample_runs": 10
+  },
+  "metrics": {
+    "accuracy_score": 0.5178571428571429,
+    "provenance_score": 0.7407407407407407,
+    "hallucination_penalty": 0.0,
+    "latency_avg_ms": 0.027836232911795378,
+    "latency_p50_ms": 0.026458495995029807,
+    "latency_p95_ms": 0.03865765465889126
+  },
+  "results": [
+    {
+      "question_id": "Q001",
+      "category": "A",
+      "latency_ms": 0.023707980290055275,
+      "citations": [
+        "ADR-002",
+        "MEETING-2026-02-20",
+        "MEETING-2026-02-15"
+      ],
+      "certainty": "possible",
+      "required_entities_found": [],
+      "required_sources_found": [],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q002",
+      "category": "A",
+      "latency_ms": 0.024500011932104826,
+      "citations": [
+        "ADR-002",
+        "SYSTEMS_MAP",
+        "DEPENDENCIES"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [],
+      "required_sources_found": [
+        "ADR-002"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q003",
+      "category": "B",
+      "latency_ms": 0.03850000211969018,
+      "citations": [
+        "DEPENDENCIES",
+        "MEETING-2026-02-15",
+        "ADR-001"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "Gateway"
+      ],
+      "required_sources_found": [
+        "DEPENDENCIES"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q004",
+      "category": "B",
+      "latency_ms": 0.03470800584182143,
+      "citations": [
+        "DEPENDENCIES",
+        "SYSTEMS_MAP",
+        "ADR-002"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "Agent Zero"
+      ],
+      "required_sources_found": [
+        "DEPENDENCIES"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q005",
+      "category": "C",
+      "latency_ms": 0.019458006136119366,
+      "citations": [],
+      "certainty": "unknown",
+      "required_entities_found": [],
+      "required_sources_found": [],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q006",
+      "category": "C",
+      "latency_ms": 0.030292023438960314,
+      "citations": [
+        "SYSTEMS_MAP",
+        "ADR-001",
+        "INC-001"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "Gateway",
+        "EdgeProxy"
+      ],
+      "required_sources_found": [
+        "SYSTEMS_MAP",
+        "ADR-001"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q007",
+      "category": "C",
+      "latency_ms": 0.03170798299834132,
+      "citations": [
+        "ADR-001",
+        "SYSTEMS_MAP",
+        "INC-001"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "Gateway",
+        "EdgeProxy",
+        "INC-001",
+        "memory exhaustion"
+      ],
+      "required_sources_found": [
+        "INC-001",
+        "SYSTEMS_MAP"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q008",
+      "category": "D",
+      "latency_ms": 0.029084039852023125,
+      "citations": [
+        "MEETING-2026-02-20",
+        "MEETING-2026-02-15",
+        "ADR-002"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "George Freeney Jr.",
+        "ADR-002",
+        "2026-01-20",
+        "2026-02-15"
+      ],
+      "required_sources_found": [
+        "ADR-002",
+        "MEETING-2026-02-15",
+        "MEETING-2026-02-20"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q009",
+      "category": "B",
+      "latency_ms": 0.034917029552161694,
+      "citations": [
+        "CHG-001",
+        "MEETING-2026-02-15",
+        "ADR-001"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "CHG-001",
+        "connection pool limits",
+        "INC-001"
+      ],
+      "required_sources_found": [
+        "CHG-001"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q010",
+      "category": "B",
+      "latency_ms": 0.038707978092134,
+      "citations": [
+        "DEPENDENCIES",
+        "ADR-002",
+        "SYSTEMS_MAP"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "Agent Zero",
+        "Neo4j"
+      ],
+      "required_sources_found": [
+        "DEPENDENCIES"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q011",
+      "category": "A",
+      "latency_ms": 0.028125010430812836,
+      "citations": [
+        "INC-002",
+        "ADR-002",
+        "DEPENDENCIES"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "Neo4j schema migration"
+      ],
+      "required_sources_found": [
+        "INC-002"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q012",
+      "category": "B",
+      "latency_ms": 0.0391670037060976,
+      "citations": [
+        "CHG-001",
+        "CHG-002",
+        "ADR-002"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "CHG-002",
+        "INC-002"
+      ],
+      "required_sources_found": [
+        "CHG-002"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q013",
+      "category": "B",
+      "latency_ms": 0.03225001273676753,
+      "citations": [
+        "INC-002",
+        "INC-001",
+        "ADR-001"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "Gateway"
+      ],
+      "required_sources_found": [
+        "INC-001"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q014",
+      "category": "C",
+      "latency_ms": 0.026958005037158728,
+      "citations": [
+        "ADR-002",
+        "MEETING-2026-02-20",
+        "MEETING-2026-02-15"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "Alice Chen",
+        "George Freeney Jr.",
+        "G. Freeney Jr."
+      ],
+      "required_sources_found": [
+        "ADR-002"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q015",
+      "category": "A",
+      "latency_ms": 0.02841599052771926,
+      "citations": [
+        "SOP-deployment",
+        "CHG-002",
+        "INC-002"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [],
+      "required_sources_found": [
+        "SOP-deployment"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q016",
+      "category": "B",
+      "latency_ms": 0.03024999750778079,
+      "citations": [
+        "MEETING-2026-02-20"
+      ],
+      "certainty": "possible",
+      "required_entities_found": [],
+      "required_sources_found": [],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q017",
+      "category": "B",
+      "latency_ms": 0.041458988562226295,
+      "citations": [
+        "DEPENDENCIES",
+        "SYSTEMS_MAP",
+        "INC-001"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "Gateway"
+      ],
+      "required_sources_found": [
+        "DEPENDENCIES"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q018",
+      "category": "C",
+      "latency_ms": 0.046083005145192146,
+      "citations": [
+        "USER_PROFILES",
+        "ADR-002",
+        "MEETING-2026-02-20"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [
+        "George Freeney Jr.",
+        "George Freeney",
+        "G. Freeney Jr.",
+        "GFJ"
+      ],
+      "required_sources_found": [
+        "USER_PROFILES"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q019",
+      "category": "E",
+      "latency_ms": 0.04095799522474408,
+      "citations": [
+        "DEPENDENCIES",
+        "INC-002",
+        "ADR-002"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [],
+      "required_sources_found": [],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    },
+    {
+      "question_id": "Q020",
+      "category": "E",
+      "latency_ms": 0.031333009246736765,
+      "citations": [
+        "ADR-002",
+        "SYSTEMS_MAP",
+        "MEETING-2026-02-20"
+      ],
+      "certainty": "supported",
+      "required_entities_found": [],
+      "required_sources_found": [
+        "ADR-002"
+      ],
+      "forbidden_claims_made": [],
+      "hallucination_detected": false,
+      "error": ""
+    }
+  ]
+}

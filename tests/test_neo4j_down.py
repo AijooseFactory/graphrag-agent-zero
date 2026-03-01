@@ -12,15 +12,15 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import pytest
-from neo4j_connector import is_neo4j_available, Neo4jConnector
-from hybrid_retrieve import HybridRetriever
+from graphrag_agent_zero.neo4j_connector import is_neo4j_available, Neo4jConnector
+from graphrag_agent_zero.hybrid_retrieve import HybridRetriever
 
 
 class TestNeo4jDownFallback:
     """Test graceful fallback when Neo4j is unavailable"""
     
     @patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "true"})
-    @patch('neo4j_connector.get_connector')
+    @patch('graphrag_agent_zero.neo4j_connector.get_connector')
     def test_is_neo4j_available_returns_false_on_connection_failure(self, mock_get):
         """is_neo4j_available returns False when connection fails"""
         mock_connector = Mock()
@@ -31,7 +31,7 @@ class TestNeo4jDownFallback:
         assert result == False
     
     @patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "true"})
-    @patch('neo4j_connector.get_connector')
+    @patch('graphrag_agent_zero.neo4j_connector.get_connector')
     def test_retriever_falls_back_when_neo4j_unavailable(self, mock_get):
         """HybridRetriever uses fallback when Neo4j unavailable"""
         mock_connector = Mock()
@@ -39,7 +39,7 @@ class TestNeo4jDownFallback:
         mock_get.return_value = mock_connector
         
         retriever = HybridRetriever()
-        result = retriever.retrieve("test query about agent memory")
+        result = retriever.retrieve("test query about agent memory", [])
         
         # Should use fallback - no crash
         assert result is not None
@@ -58,7 +58,7 @@ class TestNeo4jDownFallback:
         connector._driver = None  # Simulate disconnected
         
         # Should not raise
-        result = connector.query("MATCH (n) RETURN n", timeout_ms=5000)
+        result = connector.execute_template("check_health")
         assert result is None or result == [], "Should return empty on failure"
 
 

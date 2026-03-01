@@ -1,0 +1,46 @@
+# Docker Compose for GraphRAG Benchmarking
+# Internal port matches upstream container (port 80)
+# Host port 8087 maps to container port 80
+
+version: '3.8'
+
+services:
+  agent-zero:
+    image: agentzero/agent-zero:latest
+    ports:
+      # Host 8087 -> Container 80 (internal port matches upstream)
+      - "8087:80"
+    environment:
+      - GRAPH_RAG_ENABLED=false  # OFF by default
+    volumes:
+      - ./data:/a0/usr
+    profiles:
+      - benchmark
+
+  neo4j:
+    image: neo4j:5.15-community
+    ports:
+      - "7474:7474"   # HTTP
+      - "7687:7687"   # Bolt
+    environment:
+      - NEO4J_AUTH=neo4j/graphrag2026
+      - NEO4J_server_memory_pagecache_size=256M
+      - NEO4J_server_memory_heap_initial__size=512M
+      - NEO4J_server_memory_heap_max__size=1G
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - graphrag
+      - benchmark
+
+volumes:
+  neo4j-data:
+
+# NOTE: Internal port must match upstream container
+# Agent Zero's Dockerfile exposes port 80 for the web UI
+# If upstream changes, update this mapping accordingly

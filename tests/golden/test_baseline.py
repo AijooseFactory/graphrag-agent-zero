@@ -11,8 +11,8 @@ import sys
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from neo4j_connector import is_neo4j_available
-from hybrid_retrieve import HybridRetriever, RetrievalResult
+from graphrag_agent_zero.neo4j_connector import is_neo4j_available
+from graphrag_agent_zero.hybrid_retrieve import HybridRetriever, RetrievalResult
 
 
 def test_feature_flag_disabled():

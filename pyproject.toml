@@ -1,0 +1,32 @@
+[project]
+name = "graphrag-agent-zero"
+version = "0.1.0"
+description = "GraphRAG extension for Agent Zero"
+authors = [
+    { name = "Ai joose Factory", email = "hello@aijoose.com" }
+]
+dependencies = [
+    "python-dotenv>=1.0.1",
+]
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[project.optional-dependencies]
+neo4j = [
+    "neo4j>=5.17.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"

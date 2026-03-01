@@ -1,84 +1,5 @@
 # GraphRAG for Agent Zero
 
-**GraphRAG for Agent Zero** is an **extension-style add-on** that brings **Hybrid GraphRAG** (vector retrieval + bounded Neo4j graph expansion) to Agent Zero to improve:
-
-- **Multi-hop reasoning** (A → B → C)
-- **Provenance-aware answers** (what evidence supports a claim)
-- **Entity disambiguation** (names, aliases, ambiguous references)
-
-It is designed to be:
-
-- **Upgrade-friendly** (no “my way” lock-in)
-- **Provider-agnostic** (works with any Agent Zero LLM provider/model configuration)
-- **Safe by default** (GraphRAG is OFF unless you enable it)
-- **Resilient** (Neo4j down ⇒ no-op, Agent Zero continues)
-
----
-
-## Status
-
-| Phase | Status |
-|------|--------|
-| A. Benchmark Setup | ✅ Complete |
-| B. Baseline Metrics | ✅ Complete |
-| C. MVP Implementation | ✅ Complete |
-| D. GraphRAG Benchmark | 🔲 Pending Neo4j |
-| E. GitHub PR | 🔲 Pending |
-
-> Baseline accuracy from current benchmark corpus: **51.79%** (example run).  
-> Your results will vary by corpus and model.
-
----
-
-## Quick Start
-
-### 0) Requirements
-- **Agent Zero** installed and working
-- **Python 3.11+** (3.12 OK)
-- Optional for GraphRAG ON:
-  - **Neo4j 5.x** (Neo4j Desktop or Docker)
-
-### 1) Get the repo
-
-git clone https://github.com/AijooseFactory/graphrag-agent-zero.git
-cd graphrag-agent-zero
-2) Install dependencies
-python -m venv .venv
-source .venv/bin/activate  # macOS/Linux
-# .venv\Scripts\activate   # Windows PowerShell
-
-pip install -U pip
-pip install -e .
-
-If Neo4j is used via the official Python driver and it is an optional extra in this repo, install:
-
-pip install -e ".[neo4j]"
-3) Start Neo4j (choose ONE)
-Option A — Use Neo4j Desktop (recommended if you already use it)
-
-Start Neo4j Desktop and note your Bolt URI (commonly bolt://localhost:7687) and credentials.
-
-Option B — Start Neo4j via Docker (cross-platform)
-
-If you don’t have Neo4j running, use the dev compose provided by this repo:
-
-docker compose -f dev/docker-compose.graphrag-dev.yml up -d neo4j
-
-This repo uses non-default ports by default to avoid conflicts with common local Neo4j setups.
-
-4) Configure env vars (GraphRAG OFF by default)
-
-Create a local env file (optional) or set env vars in your shell.
-
-Minimum settings for GraphRAG ON:
-
-export GRAPH_RAG_ENABLED=true
-export NEO4J_URI="bolt://localhost:7688"        # or your Neo4j Desktop bolt URI
-export NEO4
-I just need it to tell what it is, why it improves Agent Zero and how, and how to install it.
-Thought for a few seconds
-# GraphRAG for Agent Zero
-
 **GraphRAG for Agent Zero** is an extension-style add-on that gives Agent Zero a **Hybrid GraphRAG memory layer**: it combines **vector retrieval** (semantic search) with a **knowledge graph** (Neo4j) to improve how Agent Zero recalls, connects, and explains information across any domain.
 
 ---
@@ -101,6 +22,21 @@ This gives Agent Zero better “structured recall” and more reliable context f
 
 ---
 
+## Status
+
+| Phase | Status |
+|------|--------|
+| A. Benchmark Setup | ✅ Complete |
+| B. Baseline Metrics | ✅ Complete |
+| C. MVP Implementation | ✅ Complete |
+| D. Real A0 Extension | ✅ Complete + Verified |
+| E. Dev Stack & E2E | ✅ 7 PASS |
+
+> Baseline accuracy from current benchmark corpus: **51.79%** (example run).  
+> Your results will vary by corpus and model.
+
+---
+
 ## How it works (high level)
 
 When enabled, the extension runs this pipeline:
@@ -117,54 +53,55 @@ Safety & reliability features:
 
 ---
 
-## Install
-
-### Requirements
-- A working Agent Zero install
-- Python 3.11+ (3.12 OK)
-- Neo4j 5.x (either **Neo4j Desktop** or **Docker**) if you want GraphRAG ON
+## Quick Start
 
 ### 1) Get the repo
-
+```bash
 git clone https://github.com/AijooseFactory/graphrag-agent-zero.git
 cd graphrag-agent-zero
-2) Install the package
+```
+
+### 2) Install the package
+```bash
 python -m venv .venv
 source .venv/bin/activate  # macOS/Linux
-# .venv\Scripts\activate   # Windows PowerShell
-
 pip install -U pip
-pip install -e .
-
-If the Neo4j driver is packaged as an optional extra:
-
 pip install -e ".[neo4j]"
-3) Start Neo4j (choose one)
+```
 
-Option A: Neo4j Desktop
-Start Neo4j Desktop and note your Bolt URI (commonly bolt://localhost:7687) and credentials.
+### 3) Start the Dev Stack (Port 8087)
+```bash
+# Start Agent Zero (port 8087)
+docker compose -f dev/docker-compose.graphrag-dev.yml up -d --build
 
-Option B: Docker (recommended for users without Desktop)
+# Optional: Start Neo4j
+docker compose -f dev/docker-compose.graphrag-dev.yml --profile neo4j up -d
+```
 
-docker compose -f dev/docker-compose.graphrag-dev.yml up -d neo4j
-4) Enable GraphRAG
+### 4) Verify
+```bash
+bash scripts/e2e.sh
+```
 
-Set environment variables where Agent Zero runs:
+---
 
-export GRAPH_RAG_ENABLED=true
-export NEO4J_URI="bolt://localhost:7688"   # change if using Neo4j Desktop
-export NEO4J_USER="neo4j"
-export NEO4J_PASSWORD="your-password"
+## Documentation
+- [Installation Guide](docs/install.md)
+- [Configuration](docs/config.md)
+- [Architecture](docs/architecture.md)
+- [Security Model](docs/SECURITY_MODEL.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Developer Notes](docs/DEV_NOTES.md)
 
-If you don’t set GRAPH_RAG_ENABLED=true, GraphRAG stays off and Agent Zero behaves normally.
+## Connection Details (Dev Stack)
 
-5) Verify
+| Parameter | Value |
+|-----------|-------|
+| Agent Zero UI | http://localhost:8087 |
+| Neo4j HTTP | http://localhost:7475 |
+| Neo4j Bolt | bolt://localhost:7688 |
+| Username | neo4j |
+| Password | graphrag2026 |
 
-Run tests:
-
-pytest -q
-Troubleshooting (fast)
-
-If Neo4j is down/unreachable: GraphRAG will no-op; Agent Zero should still run.
-
-If you get “model not found” errors: this extension should not change provider settings; verify your provider/model availability (e.g., for Ollama check /api/tags).
+## DBMS Location
+Neo4j runs in the isolated development stack. This ensures zero conflict with production data.
