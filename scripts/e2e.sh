@@ -82,8 +82,11 @@ echo "=================================================="
 echo "== E2E: Gate D (UI up) =="
 write_env "false"
 recreate
-# Inject dependencies before hitting API
-docker compose -f "$COMPOSE_FILE" exec -T agent-zero-graphrag-dev bash -c "source /opt/venv-a0/bin/activate && pip install neo4j httpx"
+# Inject dependencies before hitting API — setuptools is needed for numpy.distutils compat (faiss-cpu on Python 3.12+)
+sleep 5   # let supervisord initialize
+docker compose -f "$COMPOSE_FILE" exec -T agent-zero-graphrag-dev bash -c "source /opt/venv-a0/bin/activate && pip install -q neo4j httpx setuptools && pip install -q --upgrade faiss-cpu"
+# Restart the app process so it picks up the new deps
+docker compose -f "$COMPOSE_FILE" exec -T agent-zero-graphrag-dev bash -c "supervisorctl restart run_ui" || true
 wait_http_200 "http://localhost:8087/health" || fail "UI health not reachable"
 pass "UI health reachable"
 
@@ -114,7 +117,9 @@ docker compose -f "$COMPOSE_FILE" exec -T neo4j-graphrag-dev cypher-shell -u neo
 write_env "true"
 recreate
 # Inject dependencies again (container recreated)
-docker compose -f "$COMPOSE_FILE" exec -T agent-zero-graphrag-dev bash -c "source /opt/venv-a0/bin/activate && pip install neo4j httpx"
+sleep 5
+docker compose -f "$COMPOSE_FILE" exec -T agent-zero-graphrag-dev bash -c "source /opt/venv-a0/bin/activate && pip install -q neo4j httpx setuptools && pip install -q --upgrade faiss-cpu"
+docker compose -f "$COMPOSE_FILE" exec -T agent-zero-graphrag-dev bash -c "supervisorctl restart run_ui" || true
 
 wait_http_200 "http://localhost:8087/health" || fail "UI health not reachable (ON)"
 sleep 2
