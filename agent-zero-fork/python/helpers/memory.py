@@ -391,6 +391,18 @@ class Memory:
     async def insert_text(self, text, metadata: dict = {}):
         doc = Document(text, metadata=metadata)
         ids = await self.insert_documents([doc])
+
+        # Fire memory_saved_after extensions (e.g. GraphRAG sync)
+        try:
+            from python.helpers.extension import call_extensions
+            await call_extensions(
+                "memory_saved_after", agent=None,
+                text=text, metadata=metadata, doc_id=ids[0],
+                memory_subdir=self.memory_subdir,
+            )
+        except Exception:
+            pass  # Never break memory save
+
         return ids[0]
 
     async def insert_documents(self, docs: list[Document]):

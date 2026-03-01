@@ -55,8 +55,9 @@ class TestNeo4jDownFallback:
     def test_connector_query_timeout_returns_empty(self):
         """Query timeout returns empty result, not crash"""
         connector = Neo4jConnector()
-        connector._driver = None  # Simulate disconnected
-        
+        # Patch _get_driver to always return None (simulates unavailable DB)
+        connector._get_driver = lambda: None
+
         # Should not raise
         result = connector.execute_template("check_health")
         assert result is None or result == [], "Should return empty on failure"
