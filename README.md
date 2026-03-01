@@ -7,9 +7,6 @@ This repository provides a **GraphRAG** extension for **Agent Zero** that inject
 - When enabled, queries Neo4j and injects a GraphRAG context block directly into the prompt via `extras_persistent`.
 - When Neo4j is unavailable, it cleanly no-ops (no crash) and emits a resilience marker.
 
-## Top 1% Perfect Commitment
-This integration is built around a "Top 1% PERFECT" standard, ensuring that no Pull Requests will be refused to the upstream [agent0ai/agent-zero](https://github.com/agent0ai/agent-zero) repository due to integration failures or regressions. 
-
 *Contributors:* **George Freeny Jr.** (who forked Agent Zero to pioneer this integration and aspires to be a core contributor) and the **Ai joose Factory**.
 
 ## Verification Guarantees
@@ -39,27 +36,6 @@ curl -I http://localhost:8087
 chmod +x scripts/e2e.sh
 ./scripts/e2e.sh
 ```
-
-## Extension-First Documentation (For Agent Zero Builders)
-This repository is architected explicitly for developers building on top of the Agent Zero extension framework.
-
-* **Hook Point:** `message_loop_prompts_after`
-* **Override Location:** `agents/default/extensions/message_loop_prompts_after/_80_graphrag.py`
-* **Ordering Rule:** The `_80_` prefix ensures this extension runs *late* in the prompt assembly phase, guaranteeing it injects context right before the LLM call without overriding core system prompts (`_10_` or `_20_`).
-* **Source Logic:** Core retrieval processing is maintained cleanly in `src/graphrag_agent_zero/`.
-
-### Verification Markers
-The extension proves its execution deterministicly through standard output:
-- `GRAPHRAG_BASE_EXTENSION_EXECUTED` (proves baseline precedence loading, intentionally overridden by profiles).
-- `GRAPHRAG_AGENT_EXTENSION_EXECUTED` (proves the agent profile override successfully won the load order).
-- `GRAPHRAG_CONTEXT_INJECTED` (proves successful Neo4j query and memory injection).
-- `GRAPHRAG_CONTEXT_SHA256=<hash>` (verifies cryptographic integrity of the context block).
-- `GRAPHRAG_HOOKPOINT=message_loop_prompts_after` (guarantees the extension executed in the declared phase).
-- `GRAPHRAG_NOOP_NEO4J_DOWN` (proves side-effect safety when Neo4j is offline).
-
-### How to Add Your Own Extension
-1. Clone your extension script into `agents/<your_profile>/extensions/<hook_point>/<filename>.py`.
-2. Follow the chronological prefixing (`_10_`, `_50_`, `_99_`) to determine execution override order.
 
 ## Security and Architecture
 * No API secrets or internal IPs are committed.
