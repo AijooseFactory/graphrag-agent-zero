@@ -62,8 +62,8 @@ Thumbs.db
 *.egg-info/
 
 # Local Dev/Testing Forks
-agent-zero-fork/
-agent-zero-upstream/
+/agent-zero-fork
+/agent-zero-upstream
 
 # Identity & Context (Not currently used by GraphRAG directly)
 USER.md
