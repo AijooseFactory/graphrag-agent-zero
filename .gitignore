@@ -67,3 +67,4 @@ agent-zero-upstream/
 # Identity & Context (Not currently used by GraphRAG directly)
 USER.md
 IDENTITY.md
+AGENTS.md
