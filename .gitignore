@@ -1,7 +1,5 @@
 # Version Control
 .git/
-.gitignore
-.github/
 
 # Python
 __pycache__/
@@ -21,10 +19,15 @@ playwright-report/
 blob-report/
 playwright/.cache/
 
-# Docker / Agent Zero Persistency
-dev/.env
-agent-zero-fork/.env
+# Environment / Secrets
 .env
+*.env
+.env.graphrag
+dev/.env
+dev/.env.*
+!dev/.env.example
+
+# Docker / Agent Zero Persistency
 **/usr/workdir/**
 **/usr/settings.json
 **/usr/memory/**
@@ -37,6 +40,7 @@ results/
 walkthrough.md
 IMPLEMENTATION_PLAN.md
 TASK.md
+scan_results.txt
 
 # OS
 .DS_Store
