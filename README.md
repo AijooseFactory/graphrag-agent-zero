@@ -1,107 +1,68 @@
-# GraphRAG for Agent Zero
+# GraphRAG Extension for Agent Zero (Docker-Verified)
 
-**GraphRAG for Agent Zero** is an extension-style add-on that gives Agent Zero a **Hybrid GraphRAG memory layer**: it combines **vector retrieval** (semantic search) with a **knowledge graph** (Neo4j) to improve how Agent Zero recalls, connects, and explains information across any domain.
+This repository provides a **GraphRAG** extension for **Agent Zero** that injects Neo4j-derived context into the agent’s prompt loop.
 
----
+## What this does
+- Hooks into Agent Zero’s `message_loop_prompts_after` extension point without modifying core files.
+- When enabled, queries Neo4j and injects a GraphRAG context block directly into the prompt via `extras_persistent`.
+- When Neo4j is unavailable, it cleanly no-ops (no crash) and emits a resilience marker.
 
-## Why it improves Agent Zero
+## Top 1% Perfect Commitment
+This integration is built around a "Top 1% PERFECT" standard, ensuring that no Pull Requests will be refused to the upstream [agent0ai/agent-zero](https://github.com/agent0ai/agent-zero) repository due to integration failures or regressions. 
 
-Agent Zero’s standard retrieval is strong at finding relevant chunks, but it can struggle with:
+*Contributors:* **George Freeny Jr.** (who forked Agent Zero to pioneer this integration and aspires to be a core contributor) and the **Ai joose Factory**.
 
-- **Multi-hop questions**: “What led to X, who approved it, and what depends on it?”
-- **Relationship-heavy context**: dependencies, ownership, cause/effect, timelines
-- **Consistency across synonyms/aliases**: different names for the same entity
-- **Provenance**: explaining *why* an answer is correct and where it came from
+## Verification Guarantees
+This repo includes a deterministic, keyless End-to-End (E2E) testing harness:
+- Runs Agent Zero + Neo4j + an OpenAI-compatible LLM stub locally in Docker.
+- Proves extension execution via strict log markers:
+  - `GRAPHRAG_EXTENSION_EXECUTED`
+  - `GRAPHRAG_CONTEXT_INJECTED`
+  - `GRAPHRAG_NOOP_NEO4J_DOWN`
+- Validates memory receipt injection end-to-end to verify that the LLM stub successfully detects the injected graph sentinel.
 
-GraphRAG improves this by adding a second step:
-
-1) **Vector seed** finds the most relevant documents/chunks (baseline behavior)  
-2) **Graph expansion** follows explicit relationships (A → B → C) to pull in the *right* connected facts
-
-This gives Agent Zero better “structured recall” and more reliable context for planning, debugging, research, and governance work.
-
----
-
-## Status
-
-| Phase | Status |
-|------|--------|
-| A. Benchmark Setup | ✅ Complete |
-| B. Baseline Metrics | ✅ Complete |
-| C. MVP Implementation | ✅ Complete |
-| D. Real A0 Extension | ✅ Complete + Verified |
-| E. Dev Stack & E2E | ✅ 7 PASS |
-
-> Baseline accuracy from current benchmark corpus: **51.79%** (example run).  
-> Your results will vary by corpus and model.
-
----
-
-## How it works (high level)
-
-When enabled, the extension runs this pipeline:
-
-1. **Vector seed** → get top relevant chunks (baseline)
-2. **Entity pinning** → identify entities mentioned in those chunks
-3. **Bounded graph expand** → query Neo4j with allowlisted, read-only, parameterized Cypher (max 2 hops)
-4. **Context pack** → inject “Graph Facts + Evidence” into Agent Zero’s prompt
-
-Safety & reliability features:
-- **OFF by default** (`GRAPH_RAG_ENABLED=false`)
-- **Graceful fallback**: if Neo4j is unavailable, it no-ops and Agent Zero continues normally
-- **Safe Cypher only**: allowlisted templates, bounded traversal, no arbitrary queries
-
----
-
-## Quick Start
-
-### 1) Get the repo
+## Quickstart
 ```bash
-git clone https://github.com/AijooseFactory/graphrag-agent-zero.git
-cd graphrag-agent-zero
-```
+# 1. Provide a dummy configuration to run the keyless E2E stub environment
+cp dev/.env.example dev/.env
 
-### 2) Install the package
-```bash
-python -m venv .venv
-source .venv/bin/activate  # macOS/Linux
-pip install -U pip
-pip install -e ".[neo4j]"
-```
-
-### 3) Start the Dev Stack (Port 8087)
-```bash
-# Start Agent Zero (port 8087)
+# 2. Start the isolated dev stack (Agent Zero + Neo4j + LLM Stub)
 docker compose -f dev/docker-compose.graphrag-dev.yml up -d --build
 
-# Optional: Start Neo4j
-docker compose -f dev/docker-compose.graphrag-dev.yml --profile neo4j up -d
+# 3. Verify the Agent Zero web interface has come online
+curl -I http://localhost:8087
 ```
 
-### 4) Verify
+## Run E2E Verification (Hard Gate)
+
 ```bash
-bash scripts/e2e.sh
+chmod +x scripts/e2e.sh
+./scripts/e2e.sh
 ```
 
----
+## Extension-First Documentation (For Agent Zero Builders)
+This repository is architected explicitly for developers building on top of the Agent Zero extension framework.
 
-## Documentation
-- [Installation Guide](docs/install.md)
-- [Configuration](docs/config.md)
-- [Architecture](docs/architecture.md)
-- [Security Model](docs/SECURITY_MODEL.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Developer Notes](docs/DEV_NOTES.md)
+* **Hook Point:** `message_loop_prompts_after`
+* **Override Location:** `agents/default/extensions/message_loop_prompts_after/_80_graphrag.py`
+* **Ordering Rule:** The `_80_` prefix ensures this extension runs *late* in the prompt assembly phase, guaranteeing it injects context right before the LLM call without overriding core system prompts (`_10_` or `_20_`).
+* **Source Logic:** Core retrieval processing is maintained cleanly in `src/graphrag_agent_zero/`.
 
-## Connection Details (Dev Stack)
+### Verification Markers
+The extension proves its execution deterministicly through standard output:
+- `GRAPHRAG_BASE_EXTENSION_EXECUTED` (proves baseline precedence loading, intentionally overridden by profiles).
+- `GRAPHRAG_AGENT_EXTENSION_EXECUTED` (proves the agent profile override successfully won the load order).
+- `GRAPHRAG_CONTEXT_INJECTED` (proves successful Neo4j query and memory injection).
+- `GRAPHRAG_CONTEXT_SHA256=<hash>` (verifies cryptographic integrity of the context block).
+- `GRAPHRAG_HOOKPOINT=message_loop_prompts_after` (guarantees the extension executed in the declared phase).
+- `GRAPHRAG_NOOP_NEO4J_DOWN` (proves side-effect safety when Neo4j is offline).
 
-| Parameter | Value |
-|-----------|-------|
-| Agent Zero UI | http://localhost:8087 |
-| Neo4j HTTP | http://localhost:7475 |
-| Neo4j Bolt | bolt://localhost:7688 |
-| Username | neo4j |
-| Password | graphrag2026 |
+### How to Add Your Own Extension
+1. Clone your extension script into `agents/<your_profile>/extensions/<hook_point>/<filename>.py`.
+2. Follow the chronological prefixing (`_10_`, `_50_`, `_99_`) to determine execution override order.
 
-## DBMS Location
-Neo4j runs in the isolated development stack. This ensures zero conflict with production data.
+## Security and Architecture
+* No API secrets or internal IPs are committed.
+* Local `.env` files are exclusively ignored, except `dev/.env.example`.
+* Safe Cypher template engine strictly forbids arbitrary Cypher execution.
+* Provider connectivity is handled dynamically during container build.

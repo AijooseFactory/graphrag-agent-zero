@@ -34,30 +34,27 @@ services:
     build:
       context: ../agent-zero-fork
       dockerfile: DockerfileLocal
+      args:
+        - BUILD_GIT_SHA=${BUILD_GIT_SHA:-unknown}
     image: agentzero/graphrag-dev:latest
     container_name: agent-zero-graphrag-dev
     ports:
       - "8087:80"
-    environment:
-      # --- Provider connectivity (pass-through from host, never hardcoded) ---
-      # These use ${VAR:-} syntax: empty by default, set by user's shell env
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      # --- GraphRAG config ---
-      - GRAPH_RAG_ENABLED=false
-      # Neo4j connection (only matters when GRAPH_RAG_ENABLED=true)
-      - NEO4J_URI=bolt://neo4j-graphrag-dev:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=graphrag2026
-      - NEO4J_DATABASE=neo4j
-      - NEO4J_CONNECTION_TIMEOUT_MS=2000
-      - NEO4J_QUERY_TIMEOUT_MS=10000
-      - GRAPH_EXPAND_MAX_HOPS=2
-      - GRAPH_EXPAND_LIMIT=100
-      - GRAPH_MAX_RESULTS=50
+    env_file:
+      - .env
+    depends_on:
+      - llm-stub
     volumes:
       - graphrag_a0_usr:/a0/usr
+      - ../src:/a0/src
+
+  llm-stub:
+    build:
+      context: ./llm_stub
+      dockerfile: Dockerfile
+    container_name: llm-stub
+    ports:
+      - "8000:8000"
 
   neo4j-graphrag-dev:
     image: neo4j:5.17-community

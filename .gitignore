@@ -45,3 +45,16 @@ scan_results.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Agent Zero user/project data (must never be committed)
+**/usr/**
+**/tmp/**
+**/.a0proj/**
+**/logs/**
+**/uploads/**
+
+# Neo4j volumes
+**/neo4j/data/**
+**/neo4j/logs/**
+**/neo4j/import/**
+**/neo4j/plugins/**
