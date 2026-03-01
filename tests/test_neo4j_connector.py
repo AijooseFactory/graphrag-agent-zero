@@ -64,6 +64,34 @@ class TestNeo4jConnector:
         assert connector.config.uri == "bolt://localhost:7687"
         assert connector.config.user == "neo4j"
 
+    @patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "true"})
+    def test_execute_template_passes_timeout(self):
+        """execute_template must pass query_timeout_ms as timeout kwarg to session.run"""
+        from graphrag_agent_zero.neo4j_connector import Neo4jConfig
+
+        config = Neo4jConfig(query_timeout_ms=7500)
+        connector = Neo4jConnector(config=config)
+
+        mock_driver = Mock()
+        mock_session = Mock()
+        mock_result = Mock()
+        mock_result.__iter__ = Mock(return_value=iter([]))
+        mock_session.run.return_value = mock_result
+        mock_session.__enter__ = Mock(return_value=mock_session)
+        mock_session.__exit__ = Mock(return_value=False)
+        mock_driver.session.return_value = mock_session
+
+        connector._driver = mock_driver
+
+        connector.execute_template("check_health", {})
+
+        mock_session.run.assert_called_once()
+        call_kwargs = mock_session.run.call_args
+        # timeout should be in seconds (7500ms = 7.5s)
+        assert call_kwargs.kwargs.get("timeout") == 7.5 or (
+            len(call_kwargs.args) >= 3 and call_kwargs.args[2] == 7.5
+        ), f"Expected timeout=7.5s, got call: {call_kwargs}"
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

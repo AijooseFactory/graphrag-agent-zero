@@ -6,12 +6,13 @@ Thank you for your interest in contributing!
 Please be respectful and professional in all interactions.
 
 ## How to Contribute
-1. **Report Bugs:** Open an issue with clear reproduction steps.
-2. **Suggest Features:** Open an issue to discuss your idea.
-3. **Pull Requests:** 
-   - Ensure all tests pass (`pytest tests/`).
-   - Follow the established code style.
-   - Keep commits clean and logical.
+1.  **Pull Requests**:
+    - All code changes MUST be verified by the E2E harness (`bash scripts/check.sh`).
+    - New graph queries MUST be added as templates to `src/graphrag_agent_zero/safe_cypher.py`.
+    - NEVER execute arbitrary Cypher strings in the application code.
+2.  **Standards**:
+    - Follow the "Failure as NO-OP" pattern: all external service calls (Neo4j) must fail gracefully.
+    - Maintain E2E test markers to ensure observability.
 
 ## Security
 If you find a security vulnerability, please do NOT open a public issue. Instead, contact the maintainers privately.

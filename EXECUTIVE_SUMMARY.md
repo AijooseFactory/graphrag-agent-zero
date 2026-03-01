@@ -38,7 +38,8 @@ By adding GraphRAG, Agent Zero transcends simple task automation. It becomes an 
 
 ---
 
-## Technical Edge
+## Technical Edge (2026 Standards)
+- **SPEP Protocol**: Implements the **Seed -> Pin -> Expand -> Pack** sequence for high-signal retrieval.
+- **Safe Cypher Engine**: Strictly forbids arbitrary Cypher execution; uses allowlisted templates and parameterized validation.
 - **Hybrid-First**: Always uses Vector retrieval as a seed, ensuring it never loses the "needle in the haystack."
-- **Safe & Bounded**: Parameterized Cypher queries ensure the graph expansion is fast, safe, and cost-effective.
 - **Graceful Fallback**: High availability design; if the graph service is offline, Agent Zero remains functional using traditional memory.

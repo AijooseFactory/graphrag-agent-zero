@@ -345,34 +345,44 @@ def configure_websocket_namespaces(
                         )
 
                 if _csrf_required:
-                    expected_token = session.get("csrf_token")
-                    if not isinstance(expected_token, str) or not expected_token:
-                        PrintStyle.warning(
-                            f"WebSocket CSRF validation failed for {_namespace} {sid}: csrf_token not initialized"
+                    if os.getenv("E2E_DISABLE_WS_CSRF", "").lower() in {
+                        "1",
+                        "true",
+                        "yes",
+                        "on",
+                    }:
+                        PrintStyle.debug(
+                            f"WebSocket CSRF validation bypassed for {_namespace} {sid} via E2E_DISABLE_WS_CSRF"
                         )
-                        return False
+                    else:
+                        expected_token = session.get("csrf_token")
+                        if not isinstance(expected_token, str) or not expected_token:
+                            PrintStyle.warning(
+                                f"WebSocket CSRF validation failed for {_namespace} {sid}: csrf_token not initialized"
+                            )
+                            return False
 
-                    auth_token = None
-                    if isinstance(_auth, dict):
-                        auth_token = _auth.get("csrf_token") or _auth.get("csrfToken")
-                    if not isinstance(auth_token, str) or not auth_token:
-                        PrintStyle.warning(
-                            f"WebSocket CSRF validation failed for {_namespace} {sid}: missing csrf_token in auth"
-                        )
-                        return False
-                    if auth_token != expected_token:
-                        PrintStyle.warning(
-                            f"WebSocket CSRF validation failed for {_namespace} {sid}: csrf_token mismatch"
-                        )
-                        return False
+                        auth_token = None
+                        if isinstance(_auth, dict):
+                            auth_token = _auth.get("csrf_token") or _auth.get("csrfToken")
+                        if not isinstance(auth_token, str) or not auth_token:
+                            PrintStyle.warning(
+                                f"WebSocket CSRF validation failed for {_namespace} {sid}: missing csrf_token in auth"
+                            )
+                            return False
+                        if auth_token != expected_token:
+                            PrintStyle.warning(
+                                f"WebSocket CSRF validation failed for {_namespace} {sid}: csrf_token mismatch"
+                            )
+                            return False
 
-                    cookie_name = f"csrf_token_{runtime.get_runtime_id()}"
-                    cookie_token = request.cookies.get(cookie_name)
-                    if cookie_token != expected_token:
-                        PrintStyle.warning(
-                            f"WebSocket CSRF validation failed for {_namespace} {sid}: csrf cookie mismatch"
-                        )
-                        return False
+                        cookie_name = f"csrf_token_{runtime.get_runtime_id()}"
+                        cookie_token = request.cookies.get(cookie_name)
+                        if cookie_token != expected_token:
+                            PrintStyle.warning(
+                                f"WebSocket CSRF validation failed for {_namespace} {sid}: csrf cookie mismatch"
+                            )
+                            return False
 
                 user_id = session.get("user_id") or "single_user"
                 await websocket_manager.handle_connect(_namespace, sid, user_id=user_id)

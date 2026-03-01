@@ -1,21 +1,17 @@
 # GraphRAG for Agent Zero — Isolated Dev Stack
 #
 # IMPORTANT: This stack is FULLY ISOLATED from production:
-#   - Unique volume names (graphrag_a0_usr, graphrag_neo4j_data)
-#   - Unique ports (8087, 7475, 7688)
+#   - Unique volume names (graphrag_a0_usr)
+#   - Unique primary UI port (8087)
 #   - COMPOSE_PROJECT_NAME=graphrag_agent_zero_dev
 #   - No shared volumes with production Agent Zero
 #
 # Usage:
 #   docker compose -f dev/docker-compose.graphrag-dev.yml up -d --build
 #
-# Optional Neo4j:
-#   docker compose -f dev/docker-compose.graphrag-dev.yml --profile neo4j up -d
-#
 # Access:
 #   - Agent Zero UI:  http://localhost:8087
-#   - Neo4j HTTP:     http://localhost:7475  (only with --profile neo4j)
-#   - Neo4j Bolt:     bolt://localhost:7688  (only with --profile neo4j)
+#   - Embedded LLM Stub (inside same container): http://localhost:8000
 #
 # Provider connectivity:
 #   The dev container needs to reach your LLM provider (e.g., Ollama on host).
@@ -40,45 +36,13 @@ services:
     container_name: agent-zero-graphrag-dev
     ports:
       - "8087:80"
+      - "8000:8000"
     env_file:
       - .env
-    depends_on:
-      - llm-stub
     volumes:
       - graphrag_a0_usr:/a0/usr
       - ../src:/a0/src
-
-  llm-stub:
-    build:
-      context: ./llm_stub
-      dockerfile: Dockerfile
-    container_name: llm-stub
-    ports:
-      - "8000:8000"
-
-  neo4j-graphrag-dev:
-    image: neo4j:5.17-community
-    container_name: neo4j-graphrag-dev
-    profiles:
-      - neo4j
-    ports:
-      - "7475:7474"
-      - "7688:7687"
-    environment:
-      - NEO4J_AUTH=neo4j/graphrag2026
-      - NEO4J_PLUGINS=["apoc"]
-      - NEO4J_dbms_memory_heap_initial__size=512m
-      - NEO4J_dbms_memory_heap_max__size=2G
-    volumes:
-      - graphrag_neo4j_data:/data
-      - graphrag_neo4j_logs:/logs
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:7474 || exit 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - ./llm_stub:/a0/dev/llm_stub:ro
 
 volumes:
   graphrag_a0_usr:
-  graphrag_neo4j_data:
-  graphrag_neo4j_logs:

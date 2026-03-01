@@ -4,7 +4,7 @@ George is the owner of the **Ai joose Factory** and the architect of the **Graph
 
 ## 🎯 Preferences (2026)
 - **Performance**: High value on 2026-era state-of-the-art reasoning (e.g., GraphRAG).
-- **Control**: Prefers isolated dev stacks (port 8087) to avoid breaking production OpenClaw or Agent Zero instances.
+- **Control**: Prefers isolated dev stacks (port 8087) and clear separation between generic public defaults and private testing configs.
 - **Reliability**: Demands "Meticulous" documentation and E2E proof for every release.
 - **Privacy**: Strictly protects personal data and Docker volume settings.
 

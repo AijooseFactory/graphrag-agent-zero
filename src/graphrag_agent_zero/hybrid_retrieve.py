@@ -9,6 +9,7 @@ Combines vector search with graph expansion for enhanced retrieval.
 
 import time
 import logging
+import re
 from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass, field
 
@@ -179,7 +180,7 @@ class HybridRetriever:
                 seed_doc_ids.append(doc_id)
         
         if not seed_doc_ids:
-            return self._fallback_retrieval(vector_results, start_time)
+            return self._query_only_graph_retrieval(query, vector_results, start_time)
         
         # 2. SEED: Get entities associated with those documents
         entities = self._get_entities_for_docs(seed_doc_ids)
@@ -201,6 +202,88 @@ class HybridRetriever:
             graph_derived=True,
             latency_ms=(time.time() - start_time) * 1000,
         )
+
+    def _query_only_graph_retrieval(
+        self,
+        query: str,
+        vector_results: List[Dict[str, Any]],
+        start_time: float,
+    ) -> RetrievalResult:
+        """
+        Query-driven lookup path for extension calls that do not provide vector seeds.
+        """
+        entity_terms = self._extract_entity_terms_from_query(query)
+        if not entity_terms:
+            return self._fallback_retrieval(vector_results, start_time)
+
+        direct_matches = self._get_entities_for_terms(entity_terms)
+        if not direct_matches:
+            return self._fallback_retrieval(vector_results, start_time)
+
+        base_entities = [m["name"] for m in direct_matches if m.get("name")]
+        expanded_entities, relationships = self._expand_graph(base_entities)
+
+        return RetrievalResult(
+            text=self._format_entity_matches(direct_matches),
+            source_doc_ids=[],
+            entities=expanded_entities[:self.max_entities],
+            relationships=relationships,
+            graph_derived=True,
+            latency_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _extract_entity_terms_from_query(self, query: str) -> List[str]:
+        """Extract likely entity IDs/names from free-form user query."""
+        tokens = re.findall(r"\b[A-Za-z0-9_:\-]{3,}\b", query or "")
+        likely_entities = []
+
+        for token in tokens:
+            if "_" in token or any(ch.isdigit() for ch in token) or token.isupper():
+                likely_entities.append(token)
+
+        # Preserve order while deduplicating.
+        return list(dict.fromkeys(likely_entities))[:10]
+
+    def _get_entities_for_terms(self, entity_terms: List[str]) -> List[Dict[str, Any]]:
+        """Resolve query terms against entity name/id in Neo4j."""
+        matches: List[Dict[str, Any]] = []
+        seen: set[Tuple[str, str]] = set()
+
+        try:
+            connector = get_connector()
+            for term in entity_terms:
+                result = connector.execute_template(
+                    "get_entity_by_name_or_id",
+                    {"entity_term": term, "limit": 5},
+                )
+                if not result:
+                    continue
+
+                for row in result:
+                    key = (str(row.get("id", "")), str(row.get("name", "")))
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    matches.append(row)
+        except Exception as e:
+            logger.warning(f"Direct entity lookup failed: {e}")
+
+        return matches[:self.max_entities]
+
+    def _format_entity_matches(self, matches: List[Dict[str, Any]]) -> str:
+        """Create deterministic context text from direct entity matches."""
+        lines = []
+        for row in matches[:self.max_results]:
+            name = row.get("name") or row.get("id") or "unknown"
+            entity_type = row.get("type") or "Entity"
+            description = str(row.get("description") or "").strip()
+
+            if description:
+                lines.append(f"{name} ({entity_type}): {description}")
+            else:
+                lines.append(f"{name} ({entity_type})")
+
+        return "\n".join(lines)
     
     def _get_entities_for_docs(self, doc_ids: List[str]) -> List[str]:
         """Get entities mentioned in documents"""

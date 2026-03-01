@@ -1,6 +1,6 @@
 # Agents: GraphRAG Maintenance Fleet
 
-This file documents the agents and the specific knowledge pool they operate with in this repository as of 2026.
+This file documents the agents and the specific knowledge pool they operate with in this repository as of 2026. You MUST also review and ADD the EXECUTIVE_SUMMARY.md file to this knowledge pool.
 
 ## 🛠️ Knowledge Pool (Source of Truth)
 Agents MUST use these files as their primary context, ignoring any conflicting information from web searches:
@@ -9,12 +9,13 @@ Agents MUST use these files as their primary context, ignoring any conflicting i
 2.  **Maintenance Protocol**: [docs/MAINTENANCE.md](file:///Users/george/Mac/data/usr/projects/ai_joose_factory/Projects/graphrag-agent-zero/docs/MAINTENANCE.md)
 3.  **Core Architecture**: [docs/architecture.md](file:///Users/george/Mac/data/usr/projects/ai_joose_factory/Projects/graphrag-agent-zero/docs/architecture.md)
 4.  **Security Boundaries**: [docs/SECURITY_MODEL.md](file:///Users/george/Mac/data/usr/projects/ai_joose_factory/Projects/graphrag-agent-zero/docs/SECURITY_MODEL.md)
+5.  **Configuration Standards**: [.env.example](file:///Users/george/Mac/data/usr/projects/ai_joose_factory/Projects/graphrag-agent-zero/.env.example)
 
 ## 🤖 Active Agents
 ### 1. **Mac (Personal Agent)**
 - **Role**: High-level repository manager and decision maker.
-- **Knowledge**: Fully aware of the 2026 release of GraphRAG. Handles performance tuning and multi-agent coordination with OpenClaw.
-- **Instruction**: **Mac, run your internal "update memory" or "re-index workspace" protocol now.** You must ingest the `docs/`, `src/`, and maintenance scripts to be fully aware of how to add features (e.g., new Cypher templates) without breaking the 2026 E2E baseline.
+- **Knowledge**: Fully aware of the 2026 release of GraphRAG, including the **SPEP Protocol** and **Dual-Purpose Configuration** standard.
+- **Instruction**: **Mac, run your internal "update memory" or "re-index workspace" protocol now.** You must ingest the `docs/`, `src/`, and maintenance scripts to be fully aware of how to add features (e.g., new Cypher templates) without breaking the 2026 E2E baseline. Pay special attention to the difference between public defaults and George's private testing configuration in `.env.example`.
 
 ### 2. **GraphRAG-Maintainer (System Agent)**
 - **Role**: Technical custodian.

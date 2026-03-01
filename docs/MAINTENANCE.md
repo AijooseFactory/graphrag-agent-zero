@@ -26,6 +26,7 @@ This script runs:
 - `pyproject.toml` excludes `agent-zero-fork/`, `dev/`, `scripts/` from ruff scope — do NOT remove these exclusions
 - Never add `submodules: recursive` back to `.github/workflows/ci.yml`
 - All ruff `E712` comparisons in tests use `is True`/`is not True` (not `== True`)
+- **NumPy 2.0 Warning**: `faiss-cpu` is incompatible with NumPy 2.0+ on Python 3.12. Always pin `numpy<2.0.0` and ensure the `numpy.distutils` mock is present if the UI fails to start.
 
 ## 🔄 Updating from Upstream
 This repo is a fork/vending of Agent Zero. To update:

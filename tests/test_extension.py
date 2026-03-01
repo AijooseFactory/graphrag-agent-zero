@@ -34,9 +34,16 @@ class TestGraphRAGExtension:
         with patch.dict(os.environ, {}, clear=True):
             assert not is_enabled()
 
-    @patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "true"})
+    @patch.dict(os.environ, {"GRAPHRAG_ENABLED": "true"}, clear=True)
     def test_extension_hook_is_enabled_when_flagged(self):
-        """GraphRAG turns ON when flag is set"""
+        """GraphRAG turns ON when preferred flag is set"""
+        from graphrag_agent_zero.extension_hook import is_enabled
+
+        assert is_enabled()
+
+    @patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "true"}, clear=True)
+    def test_extension_hook_is_enabled_with_legacy_flag(self):
+        """GraphRAG turns ON with legacy flag for backward compatibility"""
         from graphrag_agent_zero.extension_hook import is_enabled
 
         assert is_enabled()
@@ -45,7 +52,7 @@ class TestGraphRAGExtension:
         """enhance_retrieval returns baseline when disabled"""
         from graphrag_agent_zero.extension_hook import enhance_retrieval
 
-        with patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "false"}):
+        with patch.dict(os.environ, {"GRAPHRAG_ENABLED": "false"}, clear=True):
             result = enhance_retrieval("test query", [])
             assert not result["graph_derived"]
             assert result["fallback_used"]
@@ -71,7 +78,15 @@ class TestGraphRAGExtension:
 
         assert "class GraphRAGExtension(Extension)" in source, "Must subclass Extension"
         assert "async def execute" in source, "Must implement async execute"
-        assert "GRAPH_RAG_ENABLED" in source, "Must check feature flag"
+        assert "is_enabled" in source, "Must check feature flag through extension_hook"
+
+    def test_graphrag_prompt_fragment_exists(self):
+        """Dedicated GraphRAG prompt fragment must exist for additive injection."""
+        prompt_path = os.path.join(
+            os.path.dirname(__file__), "..",
+            "agent-zero-fork", "prompts", "agent.system.graphrag.md"
+        )
+        assert os.path.exists(prompt_path), f"GraphRAG prompt fragment missing: {prompt_path}"
 
     def test_safe_cypher_exists(self):
         """safe_cypher.py must exist with allowlisted templates"""

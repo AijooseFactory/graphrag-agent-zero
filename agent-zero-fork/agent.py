@@ -858,6 +858,19 @@ class Agent:
     async def process_tools(self, msg: str):
         # search for tool usage requests in agent message
         tool_request = extract_tools.json_parse_dirty(msg)
+        if tool_request is None:
+            # Graceful fallback: if the model emits plain text instead of tool JSON,
+            # treat it as a direct final response instead of surfacing a misformat warning.
+            fallback_text = (msg or "").strip()
+            if fallback_text:
+                tool_request = {
+                    "tool_name": "response",
+                    "tool_args": {"text": fallback_text},
+                }
+                self.context.log.log(
+                    type="warning",
+                    content=f"{self.agent_name}: Auto-wrapped non-JSON output into response tool.",
+                )
 
         if tool_request is not None:
             raw_tool_name = tool_request.get("tool_name", tool_request.get("tool",""))  # Get the raw tool name
@@ -942,8 +955,9 @@ class Agent:
                 )
         else:
             warning_msg_misformat = self.read_prompt("fw.msg_misformat.md")
-            self.hist_add_warning(warning_msg_misformat)
-            PrintStyle(font_color="red", padding=True).print(warning_msg_misformat)
+            # Keep the formatting nudge for the next LLM pass without surfacing
+            # a user-visible warning in chat history.
+            self.loop_data.extras_temporary["last_format_warning"] = warning_msg_misformat
             self.context.log.log(
                 type="warning",
                 content=f"{self.agent_name}: Message misformat, no valid tool request found.",

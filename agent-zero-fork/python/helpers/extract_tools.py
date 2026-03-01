@@ -10,18 +10,98 @@ from .files import get_abs_path
 import regex
 from fnmatch import fnmatch
 
-def json_parse_dirty(json:str) -> dict[str,Any] | None:
+
+def _iter_json_object_candidates(content: str):
+    """Yield brace-balanced JSON object candidates from mixed text output."""
+    length = len(content)
+    for start in range(length):
+        if content[start] != "{":
+            continue
+
+        depth = 0
+        in_string = False
+        escaped = False
+
+        for idx in range(start, length):
+            char = content[idx]
+
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                continue
+
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    yield content[start : idx + 1]
+                    break
+                if depth < 0:
+                    break
+
+
+def _find_tool_request(data: Any) -> dict[str, Any] | None:
+    """Find a dict containing a valid tool request shape."""
+    if isinstance(data, dict):
+        tool_name = data.get("tool_name", data.get("tool", ""))
+        if isinstance(tool_name, str) and tool_name.strip():
+            return data
+
+        for value in data.values():
+            nested = _find_tool_request(value)
+            if nested is not None:
+                return nested
+
+    if isinstance(data, list):
+        for item in data:
+            nested = _find_tool_request(item)
+            if nested is not None:
+                return nested
+
+    return None
+
+
+def json_parse_dirty(json: str) -> dict[str, Any] | None:
     if not json or not isinstance(json, str):
         return None
 
-    ext_json = extract_json_object_string(json.strip())
-    if ext_json:
+    content = json.strip()
+    if not content:
+        return None
+
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def add_candidate(candidate: str):
+        candidate = candidate.strip()
+        if not candidate or candidate in seen:
+            return
+        seen.add(candidate)
+        candidates.append(candidate)
+
+    # Try the whole response first, then legacy span, then all balanced objects.
+    add_candidate(content)
+    add_candidate(extract_json_object_string(content))
+    for candidate in _iter_json_object_candidates(content):
+        add_candidate(candidate)
+
+    for candidate in candidates:
         try:
-            data = DirtyJson.parse_string(ext_json)
-            if isinstance(data,dict): return data
+            parsed = DirtyJson.parse_string(candidate)
         except Exception:
-            # If parsing fails, return None instead of crashing
-            return None
+            continue
+
+        tool_request = _find_tool_request(parsed)
+        if tool_request is not None:
+            return tool_request
+
     return None
 
 def extract_json_object_string(content):

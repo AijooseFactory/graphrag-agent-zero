@@ -21,14 +21,28 @@ _retriever: Optional[HybridRetriever] = None
 _builder: Optional[GraphBuilder] = None
 
 
+def _read_feature_flag() -> str:
+    """
+    Resolve the GraphRAG feature flag with backward compatibility.
+
+    Priority:
+    1) GRAPHRAG_ENABLED (contract flag)
+    2) GRAPH_RAG_ENABLED (legacy)
+    3) false (default)
+    """
+    if "GRAPHRAG_ENABLED" in os.environ:
+        return os.getenv("GRAPHRAG_ENABLED", "false")
+    return os.getenv("GRAPH_RAG_ENABLED", "false")
+
+
 def is_enabled() -> bool:
     """
     Check if the GraphRAG feature is active.
     
-    Triggered by the environment variable GRAPH_RAG_ENABLED.
+    Triggered by GRAPHRAG_ENABLED (preferred) or GRAPH_RAG_ENABLED (legacy).
     Defaults to 'false' to ensure non-invasive behavior if not explicitly requested.
     """
-    return os.getenv("GRAPH_RAG_ENABLED", "false").lower() == "true"
+    return _read_feature_flag().lower() == "true"
 
 
 def get_retriever() -> HybridRetriever:
@@ -168,6 +182,9 @@ def health_check() -> Dict[str, Any]:
     return {
         "enabled": is_enabled(),
         "neo4j_available": is_neo4j_available() if is_enabled() else False,
-        "feature_flag": os.getenv("GRAPH_RAG_ENABLED", "false"),
+        "feature_flag": _read_feature_flag(),
+        "feature_flag_source": (
+            "GRAPHRAG_ENABLED" if "GRAPHRAG_ENABLED" in os.environ else "GRAPH_RAG_ENABLED"
+        ),
         "neo4j_uri": os.getenv("NEO4J_URI", "not set"),
     }

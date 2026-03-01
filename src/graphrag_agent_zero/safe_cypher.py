@@ -36,11 +36,20 @@ SAFE_CYPHER_TEMPLATES = {
         RETURN e.id as id, e.name as name, e.description as description, labels(e) as types
         LIMIT $limit
     """,
+    "get_entity_by_name_or_id": """
+        MATCH (e:Entity)
+        WHERE e.name = $entity_term OR e.id = $entity_term OR toLower(e.name) = toLower($entity_term)
+        RETURN e.id as id,
+               e.name as name,
+               coalesce(e.description, '') as description,
+               coalesce(e.type, head(labels(e)), 'Entity') as type
+        LIMIT $limit
+    """,
     
     # Retrieval templates
     "get_entities_by_doc": """
         MATCH (d:Entity {name: $doc_id, type: 'Document'})-[:REFERENCES|CONTAINS|MENTIONS]->(e:Entity)
-        RETURN e.name as name, e.type as type, e.entity_id as id
+        RETURN e.name as name, e.type as type, coalesce(e.entity_id, e.id) as id
         LIMIT $limit
     """,
     "get_related_entities": """

@@ -5,7 +5,7 @@ PR #1 MVP - Tests retrieval pipeline
 
 import os
 import sys
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -54,6 +54,48 @@ class TestHybridRetriever:
                 result = retriever.retrieve("test query", vector_results)
         
         assert not result.fallback_used
+
+    @patch('graphrag_agent_zero.hybrid_retrieve.is_neo4j_available')
+    @patch('graphrag_agent_zero.hybrid_retrieve.get_connector')
+    def test_query_only_lookup_returns_entity_context(self, mock_get_connector, mock_available):
+        """No vector seeds should still return context when query matches an entity."""
+        mock_available.return_value = True
+        mock_connector = Mock()
+        mock_connector.execute_template.side_effect = lambda template, params: (
+            [{
+                "id": "eng_graphrag",
+                "name": "GRAPH_RAG_TOKEN_123",
+                "description": "E2E seed",
+                "type": "Concept",
+            }] if template == "get_entity_by_name_or_id" else []
+        )
+        mock_get_connector.return_value = mock_connector
+
+        retriever = HybridRetriever()
+        result = retriever.retrieve(
+            "Use GraphRAG: what is GRAPH_RAG_TOKEN_123?",
+            [],
+        )
+
+        assert not result.fallback_used
+        assert result.graph_derived
+        assert "GRAPH_RAG_TOKEN_123" in result.text
+        assert "E2E seed" in result.text
+
+    @patch('graphrag_agent_zero.hybrid_retrieve.is_neo4j_available')
+    @patch('graphrag_agent_zero.hybrid_retrieve.get_connector')
+    def test_query_only_lookup_falls_back_when_no_entity_match(self, mock_get_connector, mock_available):
+        """No vector seeds and no graph match should gracefully fallback."""
+        mock_available.return_value = True
+        mock_connector = Mock()
+        mock_connector.execute_template.return_value = []
+        mock_get_connector.return_value = mock_connector
+
+        retriever = HybridRetriever()
+        result = retriever.retrieve("what is unknown_token_abc", [])
+
+        assert result.fallback_used
+        assert not result.graph_derived
     
     def test_context_pack_format(self):
         """Context pack uses correct [DOC-ID] format"""

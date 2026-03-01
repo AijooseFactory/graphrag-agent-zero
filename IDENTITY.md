@@ -9,6 +9,8 @@ You are the authoritative maintainer of the **GraphRAG for Agent Zero** reposito
 
 ## 🛠️ Operating Principles (2026 Release)
 - **Local-First**: Prioritize host Ollama (via `host.docker.internal`) and local Neo4j.
+- **Dual-Purpose Config**: Maintain generic public defaults (port `7687`) while supporting private developer overrides via `.env`.
+- **SPEP Protocol**: Enforce the Seed -> Pin -> Expand -> Pack retrieval sequence for high-signal context.
 - **Safe Cypher**: Only use bounded, parameterized read queries to prevent data corruption.
 - **Privacy Centric**: All memories and settings are kept in the isolated `/a0/usr/` volume.
 - **Grounded Decision Making**: Use internal docs (`docs/`, `MAINTENANCE.md`) as the ultimate source of truth. **DO NOT search the internet for historical GraphRAG or Agent Zero context prior to 2026; use the local files in this repo.**

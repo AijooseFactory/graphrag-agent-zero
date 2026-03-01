@@ -43,6 +43,23 @@ from sentence_transformers import SentenceTransformer
 from pydantic import ConfigDict
 
 
+def _ensure_litellm_logging_debug():
+    """
+    LiteLLM's Ollama embedding handler calls `logging_obj.debug(...)` in some
+    versions, but the Logging class does not always expose that method.
+    """
+    try:
+        from litellm.litellm_core_utils.litellm_logging import Logging
+    except Exception:
+        return
+
+    if not hasattr(Logging, "debug"):
+        def _debug_noop(self, *args: Any, **kwargs: Any) -> None:
+            return None
+
+        Logging.debug = _debug_noop  # type: ignore[attr-defined]
+
+
 # disable extra logging, must be done repeatedly, otherwise browser-use will turn it back on for some reason
 def turn_off_logging():
     os.environ["LITELLM_LOG"] = "ERROR"  # only errors
@@ -56,6 +73,7 @@ def turn_off_logging():
 # init
 load_dotenv()
 turn_off_logging()
+_ensure_litellm_logging_debug()
 browser_use_monkeypatch.apply()
 
 litellm.modify_params = True # helps fix anthropic tool calls by browser-use

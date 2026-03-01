@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Neo4jConfig:
     """Configuration for Neo4j connection"""
-    uri: str = "bolt://localhost:7688"
+    uri: str = "bolt://localhost:7687"
     user: str = "neo4j"
     password: str = "graphrag2026"
     database: str = "neo4j"
@@ -33,7 +33,7 @@ class Neo4jConfig:
     def from_env(cls) -> 'Neo4jConfig':
         """Load configuration from environment variables"""
         return cls(
-            uri=os.getenv("NEO4J_URI", "bolt://localhost:7688"),
+            uri=os.getenv("NEO4J_URI", "bolt://localhost:7687"),
             user=os.getenv("NEO4J_USER", "neo4j"),
             password=os.getenv("NEO4J_PASSWORD", "graphrag2026"),
             database=os.getenv("NEO4J_DATABASE", "neo4j"),
@@ -183,7 +183,12 @@ class Neo4jConnector:
             try:
                 with driver.session(database=self.config.database) as session:
                     # Parameterized execution - the gold standard for safety
-                    result = session.run(query, parameters)
+                    # Enforce timeout in seconds (matching Neo4j driver contract)
+                    result = session.run(
+                        query, 
+                        parameters, 
+                        timeout=self.config.query_timeout_ms / 1000.0
+                    )
                     records = [dict(record) for record in result]
                     return records
             except Exception as e:
