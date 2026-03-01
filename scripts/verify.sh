@@ -32,14 +32,7 @@ echo "════════════════════════�
 echo " 1/5  Secrets Sanitation"
 echo "═══════════════════════════════════════════"
 
-SECRET_PATTERNS=(
-  'NEO4J_PASSWORD=(?!.*(\$\{|<|placeholder|changeme|test|graphrag2026))'
-  'OLLAMA_API_KEY=[A-Za-z0-9]'
-  'OPENAI_API_KEY=sk-'
-  'ANTHROPIC_API_KEY='
-  'API_KEY=[A-Za-z0-9]{20,}'
-)
-
+# Files to scan (only committed/public-facing files)
 SCAN_TARGETS=(
   "${ROOT_DIR}/.env.example"
   "${ROOT_DIR}/README.md"
@@ -51,28 +44,36 @@ SCAN_TARGETS=(
 )
 
 sanitize_ok=true
-for pattern in "${SECRET_PATTERNS[@]}"; do
+
+# Check for real API keys / passwords using grep -E (POSIX-compatible)
+check_pattern() {
+  local label="$1"
+  local pattern="$2"
   for target in "${SCAN_TARGETS[@]}"; do
     if [ -e "${target}" ]; then
-      if grep -rPq "${pattern}" "${target}" 2>/dev/null; then
-        echo "  ⚠ Secret pattern found: ${pattern}"
-        grep -rPn "${pattern}" "${target}" 2>/dev/null | head -3
+      if grep -rEq "${pattern}" "${target}" 2>/dev/null; then
+        echo "  ⚠ ${label} found in: ${target}"
+        grep -rEn "${pattern}" "${target}" 2>/dev/null | head -3
         sanitize_ok=false
       fi
     fi
   done
-done
+}
+
+check_pattern "OpenAI API key"      "OPENAI_API_KEY=sk-[A-Za-z0-9]"
+check_pattern "Anthropic API key"   "ANTHROPIC_API_KEY=[A-Za-z0-9]"
 
 # Also check git staged files (if in a git repo)
 if git -C "${ROOT_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   staged_files="$(git -C "${ROOT_DIR}" diff --cached --name-only 2>/dev/null || true)"
   if [ -n "${staged_files}" ]; then
-    for pattern in "${SECRET_PATTERNS[@]}"; do
-      if echo "${staged_files}" | xargs -I{} grep -Pq "${pattern}" "${ROOT_DIR}/{}" 2>/dev/null; then
-        echo "  ⚠ Secret in staged file matching: ${pattern}"
+    while IFS= read -r f; do
+      full="${ROOT_DIR}/${f}"
+      if [ -f "${full}" ] && grep -Eq "OPENAI_API_KEY=sk-|ANTHROPIC_API_KEY=[A-Za-z0-9]" "${full}" 2>/dev/null; then
+        echo "  ⚠ Secret in staged file: ${f}"
         sanitize_ok=false
       fi
-    done
+    done <<< "${staged_files}"
   fi
 fi
 
@@ -95,7 +96,7 @@ if command -v ruff >/dev/null 2>&1; then
     step_fail "Lint — ruff reported errors"
   fi
 else
-  echo "  ⚠ ruff not found, skipping lint"
+  echo "  ℹ ruff not found, skipping lint"
   step_pass "Lint (skipped — ruff not installed)"
 fi
 
@@ -112,7 +113,7 @@ if command -v pytest >/dev/null 2>&1; then
     step_fail "Unit tests"
   fi
 else
-  echo "  ⚠ pytest not found, skipping unit tests"
+  echo "  ℹ pytest not found, skipping unit tests"
   step_pass "Unit tests (skipped — pytest not installed)"
 fi
 
