@@ -5,12 +5,12 @@ PR #1 MVP - Tests graceful fallback behavior
 
 import os
 import sys
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import pytest
-from graphrag_agent_zero.neo4j_connector import Neo4jConnector, get_connector, is_neo4j_available
+from graphrag_agent_zero.neo4j_connector import Neo4jConnector, is_neo4j_available
 
 
 class TestNeo4jConnector:
@@ -20,7 +20,7 @@ class TestNeo4jConnector:
     def test_feature_flag_disabled_returns_false(self):
         """When GRAPH_RAG_ENABLED=false, is_neo4j_available returns False"""
         result = is_neo4j_available()
-        assert result == False, "Should return False when feature flag is off"
+        assert not result, "Should return False when feature flag is off"
     
     @patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "true"})
     @patch('graphrag_agent_zero.neo4j_connector.get_connector')
@@ -31,7 +31,7 @@ class TestNeo4jConnector:
         mock_get_connector.return_value = mock_connector
         
         result = is_neo4j_available()
-        assert result == False, "Should return False when Neo4j is unhealthy"
+        assert not result, "Should return False when Neo4j is unhealthy"
     
     @patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "true"})
     @patch('graphrag_agent_zero.neo4j_connector.get_connector')
@@ -42,7 +42,7 @@ class TestNeo4jConnector:
         mock_get_connector.return_value = mock_connector
         
         result = is_neo4j_available()
-        assert result == True, "Should return True when Neo4j is healthy"
+        assert result, "Should return True when Neo4j is healthy"
     
     @patch('graphrag_agent_zero.neo4j_connector.GraphDatabase', create=True)
     def test_connector_handles_connection_error(self, mock_driver):

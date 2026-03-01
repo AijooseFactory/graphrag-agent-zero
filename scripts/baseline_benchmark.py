@@ -11,11 +11,9 @@ Collects latency, accuracy, and hallucination metrics.
 import json
 import time
 import asyncio
-import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from statistics import mean, quantiles
 
 # Configuration
@@ -181,7 +179,7 @@ def simulate_llm_response(question: str, context: list[tuple[str, str, float]],
         return "I don't have sufficient information to answer this question.", [], "unknown"
     
     # Build context string
-    context_str = "\n\n".join([f"[{doc_id}] {content[:500]}..." 
+    "\n\n".join([f"[{doc_id}] {content[:500]}..." 
                                for doc_id, content, score in context])
     
     # Extract citations
@@ -378,7 +376,7 @@ async def main():
     print("="*60)
     print("GraphRAG Agent Zero - Baseline Benchmark Runner")
     print("="*60)
-    print(f"\nMode: BASELINE (GraphRAG DISABLED)")
+    print("\nMode: BASELINE (GraphRAG DISABLED)")
     print(f"Questions: {QUESTIONS_FILE}")
     print(f"Corpus: {CORPUS_DIR}")
     print(f"Warmup runs: {WARMUP_RUNS}")

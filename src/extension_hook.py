@@ -11,12 +11,12 @@ from typing import List, Dict, Any, Optional
 
 # Handle both package and direct imports
 try:
-    from .hybrid_retrieve import HybridRetriever, RetrievalResult
-    from .neo4j_connector import is_neo4j_available, get_connector
+    from .hybrid_retrieve import HybridRetriever
+    from .neo4j_connector import is_neo4j_available
     from .graph_builder import GraphBuilder
 except ImportError:
-    from hybrid_retrieve import HybridRetriever, RetrievalResult
-    from neo4j_connector import is_neo4j_available, get_connector
+    from hybrid_retrieve import HybridRetriever
+    from neo4j_connector import is_neo4j_available
     from graph_builder import GraphBuilder
 
 

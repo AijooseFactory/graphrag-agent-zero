@@ -6,7 +6,7 @@ NO arbitrary Cypher allowed. All queries must be parameterized and bounded.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 

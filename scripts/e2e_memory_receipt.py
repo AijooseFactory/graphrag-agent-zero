@@ -1,7 +1,6 @@
 import asyncio
 from python.helpers.memory import Memory
 from python.helpers.print_style import PrintStyle
-from agent import Agent  # Agent exists in container runtime
 
 RECEIPT = "GRAPH_RAG_SELF_RECEIPT"
 

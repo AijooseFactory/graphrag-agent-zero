@@ -5,8 +5,7 @@ Proves the real Agent Zero extension pattern works.
 
 import os
 import sys
-from unittest.mock import Mock, patch, AsyncMock
-import asyncio
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -33,14 +32,14 @@ class TestGraphRAGExtension:
         from graphrag_agent_zero.extension_hook import is_enabled
 
         with patch.dict(os.environ, {}, clear=True):
-            assert is_enabled() == False
+            assert not is_enabled()
 
     @patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "true"})
     def test_extension_hook_is_enabled_when_flagged(self):
         """GraphRAG turns ON when flag is set"""
         from graphrag_agent_zero.extension_hook import is_enabled
 
-        assert is_enabled() == True
+        assert is_enabled()
 
     def test_extension_hook_enhance_retrieval_disabled(self):
         """enhance_retrieval returns baseline when disabled"""
@@ -48,8 +47,8 @@ class TestGraphRAGExtension:
 
         with patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "false"}):
             result = enhance_retrieval("test query", [])
-            assert result["graph_derived"] == False
-            assert result["fallback_used"] == True
+            assert not result["graph_derived"]
+            assert result["fallback_used"]
 
     def test_extension_file_exists(self):
         """The Agent Zero extension file must exist at the correct path"""

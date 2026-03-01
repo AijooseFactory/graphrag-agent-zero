@@ -28,7 +28,7 @@ class TestNeo4jDownFallback:
         mock_get.return_value = mock_connector
         
         result = is_neo4j_available()
-        assert result == False
+        assert not result
     
     @patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "true"})
     @patch('graphrag_agent_zero.neo4j_connector.get_connector')
@@ -43,14 +43,14 @@ class TestNeo4jDownFallback:
         
         # Should use fallback - no crash
         assert result is not None
-        assert result.fallback_used == True
-        assert result.graph_derived == False
+        assert result.fallback_used
+        assert not result.graph_derived
     
     @patch.dict(os.environ, {"GRAPH_RAG_ENABLED": "false"})
     def test_disabled_flag_always_returns_unavailable(self):
         """When disabled, always returns unavailable (no Neo4j check)"""
         result = is_neo4j_available()
-        assert result == False
+        assert not result
     
     def test_connector_query_timeout_returns_empty(self):
         """Query timeout returns empty result, not crash"""

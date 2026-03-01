@@ -1,5 +1,4 @@
 import sys
-import os
 import asyncio
 
 sys.path.insert(0, '/a0')

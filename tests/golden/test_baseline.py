@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from graphrag_agent_zero.neo4j_connector import is_neo4j_available
-from graphrag_agent_zero.hybrid_retrieve import HybridRetriever, RetrievalResult
+from graphrag_agent_zero.hybrid_retrieve import HybridRetriever
 
 
 def test_feature_flag_disabled():
@@ -21,7 +21,7 @@ def test_feature_flag_disabled():
     os.environ["GRAPH_RAG_ENABLED"] = "false"
     
     # Should return False when disabled
-    assert is_neo4j_available() == False, "GraphRAG should be disabled by default"
+    assert not is_neo4j_available(), "GraphRAG should be disabled by default"
     print("✅ Feature flag test passed")
 
 
@@ -40,8 +40,8 @@ def test_fallback_retrieval():
     result = retriever.retrieve("test query", vector_results)
     
     # Should use fallback
-    assert result.fallback_used == True, "Should use fallback when disabled"
-    assert result.graph_derived == False, "Should not have graph-derived content"
+    assert result.fallback_used, "Should use fallback when disabled"
+    assert not result.graph_derived, "Should not have graph-derived content"
     assert len(result.source_doc_ids) == 2, "Should preserve source doc IDs"
     print("✅ Fallback retrieval test passed")
 

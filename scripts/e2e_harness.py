@@ -1,5 +1,4 @@
 import subprocess
-import time
 import requests
 import sys
 import os

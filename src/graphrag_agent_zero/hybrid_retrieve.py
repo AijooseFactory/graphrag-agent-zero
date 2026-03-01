@@ -7,12 +7,10 @@ Combines vector search with graph expansion for enhanced retrieval.
 - Deterministic citations [DOC-ID] for scoring
 """
 
-import os
 import time
 import logging
 from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime
 
 # Handle both package and direct imports
 try:

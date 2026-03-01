@@ -5,7 +5,7 @@ PR #1 MVP - Tests retrieval pipeline
 
 import os
 import sys
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -23,8 +23,8 @@ class TestHybridRetriever:
             source_doc_ids=[]
         )
         assert result.text == "test context"
-        assert result.fallback_used == False, "Default is success"
-        assert result.graph_derived == False, "Default no graph"
+        assert not result.fallback_used, "Default is success"
+        assert not result.graph_derived, "Default no graph"
     
     @patch('graphrag_agent_zero.hybrid_retrieve.is_neo4j_available')
     def test_retrieve_when_disabled_uses_fallback(self, mock_available):
@@ -34,8 +34,8 @@ class TestHybridRetriever:
         retriever = HybridRetriever()
         result = retriever.retrieve("test query", [])
         
-        assert result.fallback_used == True
-        assert result.graph_derived == False
+        assert result.fallback_used
+        assert not result.graph_derived
     
     @patch('graphrag_agent_zero.hybrid_retrieve.is_neo4j_available')
     def test_retrieve_enabled_uses_hybrid(self, mock_available):
@@ -53,7 +53,7 @@ class TestHybridRetriever:
             with patch.object(retriever, '_expand_graph', return_value=(["Entity1"], [])):
                 result = retriever.retrieve("test query", vector_results)
         
-        assert result.fallback_used == False
+        assert not result.fallback_used
     
     def test_context_pack_format(self):
         """Context pack uses correct [DOC-ID] format"""

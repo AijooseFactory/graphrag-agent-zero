@@ -45,7 +45,7 @@ class TestCIProviderAgnostic:
         result = enhance_retrieval(query, vector_results)
         
         assert result["text"] == "Enriched graph context"
-        assert result["graph_derived"] == True
+        assert result["graph_derived"]
         assert "DOC-001" in result["sources"]
         print("✅ Provider-agnostic test passed")
 
