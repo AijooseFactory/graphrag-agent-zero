@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, List, Sequence
 from langchain.storage import InMemoryByteStore, LocalFileStore
@@ -388,20 +390,28 @@ class Memory:
             self._save_db()  # persist
         return rem_docs
 
-    async def insert_text(self, text, metadata: dict = {}):
+    async def insert_text(self, text, metadata: dict | None = None):
+        metadata = metadata or {}
         doc = Document(text, metadata=metadata)
         ids = await self.insert_documents([doc])
 
-        # Fire memory_saved_after extensions (e.g. GraphRAG sync)
+        # Fire post-save memory hook extensions (best-effort, never breaks memory save)
         try:
             from python.helpers.extension import call_extensions
             await call_extensions(
-                "memory_saved_after", agent=None,
-                text=text, metadata=metadata, doc_id=ids[0],
+                "memory_saved_after",
+                agent=getattr(self, "agent", None),
+                text=text,
+                metadata=metadata,
+                doc_id=ids[0],
                 memory_subdir=self.memory_subdir,
             )
-        except Exception:
-            pass  # Never break memory save
+        except Exception as e:
+            try:
+                from python.helpers.print_style import PrintStyle
+                PrintStyle.warning(f"memory_saved_after hook failed: {type(e).__name__}")
+            except Exception:
+                pass
 
         return ids[0]
 
