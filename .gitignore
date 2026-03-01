@@ -59,3 +59,11 @@ Thumbs.db
 **/neo4j/import/**
 **/neo4j/plugins/**
 *.egg-info/
+
+# Local Dev/Testing Forks
+agent-zero-fork/
+agent-zero-upstream/
+
+# Identity & Context (Not currently used by GraphRAG directly)
+USER.md
+IDENTITY.md
