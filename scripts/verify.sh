@@ -46,6 +46,7 @@ SCAN_TARGETS=(
 sanitize_ok=true
 
 # Check for real API keys / passwords using grep -E (POSIX-compatible)
+# Scans ALL text including comments and markdown code blocks.
 check_pattern() {
   local label="$1"
   local pattern="$2"
@@ -62,6 +63,9 @@ check_pattern() {
 
 check_pattern "OpenAI API key"      "OPENAI_API_KEY=sk-[A-Za-z0-9]"
 check_pattern "Anthropic API key"   "ANTHROPIC_API_KEY=[A-Za-z0-9]"
+# Catch real passwords in comments (e.g. commented-out PASSWORD=<real_value>)
+# Safe placeholders like graphrag2026 or <your-password-here> will match but are acceptable.
+check_pattern "Commented password"  '#.*PASSWORD=[A-Za-z0-9@!$]{6,}'
 
 # Also check git staged files (if in a git repo)
 if git -C "${ROOT_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then

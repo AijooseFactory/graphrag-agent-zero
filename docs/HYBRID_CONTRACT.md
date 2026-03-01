@@ -97,3 +97,18 @@ No external API keys required. Docker + LLM stub only.
 - No arbitrary Cypher execution permitted.
 - Parameters are validated and bounded before execution.
 - Query timeouts are enforced at the driver level.
+- Commented secrets (in `.env.example`, docs, markdown) are treated as secrets and caught by the sanitation gate.
+
+## 8. Verification Coverage
+
+| Gate | CI (`--ci`) | Local (full) |
+|------|:-----------:|:------------:|
+| Secrets sanitation | ✅ | ✅ |
+| Lint (ruff) | ✅ | ✅ |
+| Unit tests (43 tests) | ✅ | ✅ |
+| E2E hybrid contract (3 cases) | ⏭ skipped | ✅ |
+| Playwright | ⏭ skipped | Optional |
+
+> CI validates sanitation, lint, and unit tests on every push/PR.
+> Full E2E (Docker + Neo4j + LLM stub) is required locally before release.
+> See `docs/RELEASE_CHECKLIST.md` for the pre-release process.
