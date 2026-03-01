@@ -37,6 +37,7 @@ dev/.env.*
 .gemini/
 brain/
 results/
+artifacts/
 walkthrough.md
 IMPLEMENTATION_PLAN.md
 TASK.md

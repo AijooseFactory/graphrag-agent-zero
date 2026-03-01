@@ -1,7 +1,7 @@
-# Executive Summary: GraphRAG for Agent Zero
+# Executive Summary: Hybrid GraphRAG for Agent Zero
 
 ## What it is
-**GraphRAG for Agent Zero** is an intelligence-boosting extension that replaces traditional "flat" document retrieval with a **Structured Knowledge Layer**. It integrates a **Neo4j Knowledge Graph** directly into the Agent Zero memory loop.
+**Hybrid GraphRAG for Agent Zero** is an intelligence-boosting extension that **augments** traditional "flat" document retrieval with a **Structured Knowledge Layer**. It integrates a **Neo4j Knowledge Graph** directly into the Agent Zero memory loop **while preserving native memory behavior**.
 
 ---
 
@@ -15,22 +15,22 @@ Standard RAG finds facts in isolation. GraphRAG follows relationships across doc
 - **Smarter**: Discovers that "Person Y" *approved* "Project X" which *depends* on "System Z", even if those facts are 1,000 pages apart.
 
 ### 2. Entity Grounding & Disambiguation
-Prevents hallucinations by anchoring the agent to a definitive "Source of Truth" graph.
+Reduces hallucinations by anchoring retrieval to explicit entities and relationships in the graph.
 - **Traditional**: Might confuse "Mercury" (the planet) with "Mercury" (the element) if both are in the vector DB.
-- **Smarter**: Knows which "Mercury" is being discussed because it sees the explicit graph relationships to "Astronomy" or "Chemistry".
+- **Smarter**: Knows which "Mercury" is being discussed because it sees explicit relationships to "Astronomy" or "Chemistry".
 
 ### 3. Structured Historical Context (Global Perspective)
-Vector search is restricted to small windows of text. GraphRAG provides a "Global Map" of knowledge.
-- **Smarter**: Agent Zero can see the entire topology of a massive codebase or research corpus at a glance, allowing for superior planning and architectural oversight.
+Vector search is restricted to small windows of text. GraphRAG provides a higher-level map of how knowledge connects.
+- **Smarter**: Agent Zero can leverage corpus topology (entities, links, dependencies) to improve planning and architectural oversight across large codebases or research corpora.
 
 ### 4. Direct Evidence & Provenance
-Every fact retrieved via the graph comes with an explicit path (A → [Works On] → B).
-- **Smarter**: Agent Zero can explain *exactly why* it reached a conclusion, citing the specific relationships as evidence, which is essential for debugging and governance.
+When graph expansion is used, retrieved context can include relationship evidence (for example, A → [Works On] → B) and deterministic document IDs.
+- **Smarter**: Agent Zero can explain *why* it reached a conclusion by citing specific relationships and sources, which is essential for debugging and governance.
 
 ---
 
 ## Business Value: The "Expert" Agent
-By adding GraphRAG, Agent Zero transcends simple task automation. It becomes an **Institutional Expert** that understands the deep relationships within your private data—making it significantly more effective for:
+By adding Hybrid GraphRAG, Agent Zero goes beyond simple task automation. It becomes an **Institutional Expert** that understands the deep relationships within your private data—making it significantly more effective for:
 - **Complex Software Engineering** (Dependency analysis, bug impact)
 - **Scientific Research** (Connection discovery)
 - **Legal & Compliance** (Clause relationship mapping)
@@ -39,7 +39,7 @@ By adding GraphRAG, Agent Zero transcends simple task automation. It becomes an 
 ---
 
 ## Technical Edge (2026 Standards)
-- **SPEP Protocol**: Implements the **Seed -> Pin -> Expand -> Pack** sequence for high-signal retrieval.
+- **SPEP Protocol**: Implements the **Seed → Pin → Expand → Pack** sequence for high-signal retrieval.
 - **Safe Cypher Engine**: Strictly forbids arbitrary Cypher execution; uses allowlisted templates and parameterized validation.
-- **Hybrid-First**: Always uses Vector retrieval as a seed, ensuring it never loses the "needle in the haystack."
-- **Graceful Fallback**: High availability design; if the graph service is offline, Agent Zero remains functional using traditional memory.
+- **Hybrid Retrieval**: Uses vector-seeded retrieval when available, and falls back to query-driven entity lookup when no vector seeds exist—while always preserving Agent Zero’s native memory behavior.
+- **Graceful Fallback**: High availability design; if the graph service is offline, Agent Zero remains functional using traditional memory (with GraphRAG cleanly no-oping).
