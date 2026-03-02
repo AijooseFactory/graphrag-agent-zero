@@ -61,17 +61,17 @@ echo "  [2/4] Copying extensions..."
 
 # 2a. Prompt injection extension
 mkdir -p "$A0_ROOT/agents/default/extensions/message_loop_prompts_after"
-cp "$SCRIPT_DIR/agent-zero-fork/agents/default/extensions/message_loop_prompts_after/_80_graphrag.py" \
+cp "$SCRIPT_DIR/installer_files/_80_graphrag.py" \
    "$A0_ROOT/agents/default/extensions/message_loop_prompts_after/"
 
 # 2b. Auto-sync extension
 mkdir -p "$A0_ROOT/python/extensions/memory_saved_after"
-cp "$SCRIPT_DIR/agent-zero-fork/python/extensions/memory_saved_after/_80_graphrag_sync.py" \
+cp "$SCRIPT_DIR/installer_files/_80_graphrag_sync.py" \
    "$A0_ROOT/python/extensions/memory_saved_after/"
 
 # 2c. Prompt template
 mkdir -p "$A0_ROOT/prompts"
-cp "$SCRIPT_DIR/agent-zero-fork/prompts/agent.system.graphrag.md" \
+cp "$SCRIPT_DIR/installer_files/agent.system.graphrag.md" \
    "$A0_ROOT/prompts/"
 
 echo "  ✅  Extensions copied"

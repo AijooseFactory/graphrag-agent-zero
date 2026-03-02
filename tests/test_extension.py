@@ -61,8 +61,7 @@ class TestGraphRAGExtension:
         """The Agent Zero extension file must exist at the correct path"""
         ext_path = os.path.join(
             os.path.dirname(__file__), "..",
-            "agent-zero-fork", "agents", "default", "extensions",
-            "message_loop_prompts_after", "_80_graphrag.py"
+            "installer_files", "_80_graphrag.py"
         )
         assert os.path.exists(ext_path), f"Extension file missing: {ext_path}"
 
@@ -70,8 +69,7 @@ class TestGraphRAGExtension:
         """The extension file must contain a class that would subclass Extension"""
         ext_path = os.path.join(
             os.path.dirname(__file__), "..",
-            "agent-zero-fork", "agents", "default", "extensions",
-            "message_loop_prompts_after", "_80_graphrag.py"
+            "installer_files", "_80_graphrag.py"
         )
         with open(ext_path, "r") as f:
             source = f.read()
@@ -84,7 +82,7 @@ class TestGraphRAGExtension:
         """Dedicated GraphRAG prompt fragment must exist for additive injection."""
         prompt_path = os.path.join(
             os.path.dirname(__file__), "..",
-            "agent-zero-fork", "prompts", "agent.system.graphrag.md"
+            "installer_files", "agent.system.graphrag.md"
         )
         assert os.path.exists(prompt_path), f"GraphRAG prompt fragment missing: {prompt_path}"
 
