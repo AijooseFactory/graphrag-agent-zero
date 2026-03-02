@@ -69,3 +69,6 @@ Thumbs.db
 USER.md
 IDENTITY.md
 AGENTS.md
+
+# Test Scripts
+src/test_memory_sync.py
