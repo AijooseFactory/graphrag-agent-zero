@@ -52,7 +52,7 @@ Then restart Agent Zero. That's it.
 
 ---
 
-## How toVerify Behavior:
+## How to Verify Behavior:
 
 Run the one-command verification suite. It spins up an isolated Docker test to explicitly prove:
 1. **Hybrid OFF**: Stock memory behavior is completely unchanged.
