@@ -1,8 +1,8 @@
 # Hybrid GraphRAG for Agent Zero
 
-Add a **Neo4j knowledge graph** to Agent Zero's memory. One safe, auto-applied patch to `memory.py` — everything else is pure extensions.
+Add a **Neo4j knowledge graph** to Agent Zero's memory. Fully dynamic and persistent — uses safe `agent_init` hooks to integrate cleanly without touching or modifying Agent Zero's core files.
 
-When enabled, Agent Zero's memories are automatically indexed into a graph and used to enrich every prompt with connected context. When disabled, Agent Zero behaves exactly like stock.
+When enabled, Agent Zero's memories are automatically indexed into a graph and used to enrich every prompt with connected context. When disabled, Agent Zero behaves exactly like stock. Survives Docker container restarts and wipes automatically since everything lives in the `usr/` volume.
 
 ---
 

@@ -81,6 +81,13 @@ SAFE_CYPHER_TEMPLATES = {
         SET e += $properties, e.updated_at = datetime()
         RETURN e
     """,
+    
+    # Deletion templates
+    "delete_document": """
+        MATCH (e:Entity {id: $doc_id})
+        DETACH DELETE e
+        RETURN count(e) as deleted
+    """,
 }
 
 # DYNAMIC TEMPLATE GENERATION

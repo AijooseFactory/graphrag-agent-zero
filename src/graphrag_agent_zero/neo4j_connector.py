@@ -201,6 +201,20 @@ class Neo4jConnector:
         
         return None
     
+    def delete_document(self, doc_id: str) -> bool:
+        """
+        Safely deletes a document node and all its relationships from Neo4j.
+        """
+        try:
+            result = self.execute_template("delete_document", {"doc_id": doc_id})
+            if result and len(result) > 0:
+                deleted_count = result[0].get("deleted", 0)
+                return deleted_count > 0
+            return False
+        except Exception as e:
+            logger.error(f"Failed to delete document {doc_id} from Neo4j: {e}")
+            return False
+
     def close(self):
         """Standard cleanup for the Neo4j driver."""
         if self._driver:
