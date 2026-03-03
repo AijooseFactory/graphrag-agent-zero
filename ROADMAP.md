@@ -23,7 +23,15 @@ Based on the current architecture, implementation, and v0.1.1 features, here are
 
 ---
 
-### 🔥 High Priority (High Impact, Feasible)
+### � Top Priority (Critical for Semantic Power)
+
+| Area | Improvement | Rationale |
+|------|-------------|----------|
+| **LLM Entity Extraction** | Ensure configured Utility Model uses an LLM-based entity extraction layer | The current implementation is a foundation but lacks the semantic extraction that makes GraphRAG powerful. |
+
+---
+
+### �🔥 High Priority (High Impact, Feasible)
 
 | Area | Improvement | Rationale |
 |------|-------------|----------|
