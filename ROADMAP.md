@@ -176,20 +176,60 @@ async def with_retry(operation, max_retries=3, base_delay=1.0):
 
 ### 📋 Proposed v0.2.0 Roadmap
 
-```
-v0.2.0 - Performance, Cost Control, Reliability & Observability
+#### 🚨 Must Fix for v0.2.0
+
+**1. Install reliability hardening**
+- Eliminate common install blockers across macOS/Linux (and Docker where applicable).
+- Remove any brittle assumptions about file paths, shell features, or environment layouts.
+- Ensure install is deterministic: either succeeds and confirms success, or fails fast with a clear reason and fix steps.
+
+**2. Installer improvements (`install.sh`)**
+- Detects common Agent Zero layouts automatically (venv location, repo root, agents/default path, extensions path).
+- Validates prerequisites up front (python/venv, permissions, required commands, Neo4j env vars only if enabling).
+- Produces clear, immediate messages:
+  - what was detected
+  - what was installed/copied/modified
+  - what to do next
+  - how to rollback/uninstall (if applicable)
+- Includes a built-in `--verify` mode that checks expected files/markers and prints a simple PASS/FAIL summary.
+
+**3. Built-in diagnostics to prevent “GraphRAG is missing” confusion**
+- Provide a lightweight, always-available **Hybrid GraphRAG status marker** at `agent_init` (truthful and conditional).
+- Add a documented “How to verify GraphRAG is active” section that points users to log markers and the status output.
+- Ensure empty-context behavior is understandable (e.g., `GRAPHRAG_NOOP_EMPTY_CONTEXT` is expected and not treated as a broken install).
+
+#### Performance, Cost Control, Reliability & Observability
+
+```text
+v0.2.0 - Core Focus
+├── [Must Fix] Install reliability hardening
+├── [Must Fix] Installer improvements (install.sh)
+├── [Must Fix] Built-in diagnostics & status marker
+├── Optional AI-assisted install mode (Nice-to-have)  ← NEW
 ├── Caching Layer (LRU + TTL)
 ├── Entity Deduplication (exact/normalized, optional fuzzy)
 ├── Batch Ingestion Mode
 ├── Prometheus Metrics Endpoint
 ├── Hybrid NER Pipeline (tiered extraction)
 ├── Memory Graph Viewer (Obsidian-style)
-├── Structured Logging (JSON + correlation IDs)      ← NEW
-├── Error Classification (transient/permanent/partial) ← NEW
-├── Circuit Breaker for Neo4j                         ← NEW
-├── Retry with Exponential Backoff                    ← NEW
-└── Dead Letter Queue for failed extractions          ← NEW
+├── Structured Logging (JSON + correlation IDs)
+├── Error Classification (transient/permanent/partial)
+├── Circuit Breaker for Neo4j
+├── Retry with Exponential Backoff
+└── Dead Letter Queue for failed extractions
 ```
+
+#### 🤖 Optional AI-assisted install mode (Nice-to-have / Optional for v0.2.0)
+An optional installer mode that can use:
+- the user’s existing Agent Zero agent, or
+- a user-selected AI model/provider,
+to guide environment-specific install decisions.
+
+This mode must:
+- ask for the minimum required info
+- generate a tailored install plan for that user’s setup
+- never hide what it is changing (print actions before executing)
+- remain optional (default install stays non-AI)
 
 ---
 
