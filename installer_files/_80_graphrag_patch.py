@@ -73,8 +73,29 @@ class GraphRAGPatchExtension(Extension):
 
             Memory.delete_documents_by_ids = patched_delete_documents_by_ids
             
+            # --- PATCH models._merge_provider_defaults ---
+            # Automatically allocate enough context window for local Ollama models 
+            # to handle the GraphRAG memory injections, without requiring user config edits.
+            try:
+                import sys
+                models_mod = sys.modules.get('models')
+                if models_mod and hasattr(models_mod, '_merge_provider_defaults'):
+                    original_merge_provider_defaults = models_mod._merge_provider_defaults
+
+                    def patched_merge_provider_defaults(provider_type, original_provider, kwargs):
+                        provider_name, new_kwargs = original_merge_provider_defaults(provider_type, original_provider, kwargs)
+                        if provider_name and isinstance(provider_name, str) and provider_name.lower() == "ollama":
+                            if "num_ctx" not in new_kwargs:
+                                new_kwargs["num_ctx"] = 8192
+                        return provider_name, new_kwargs
+
+                    models_mod._merge_provider_defaults = patched_merge_provider_defaults
+                    logger.info("GraphRAG dynamically patched Ollama models for improved context length.")
+            except Exception as e:
+                logger.warning(f"GraphRAG failed to patch models for context length: {e}")
+            
             _patched = True
-            logger.info("GraphRAG dynamically patched Memory successfully.")
+            logger.info("GraphRAG dynamically patched Agent Zero successfully.")
             
         except Exception as e:
             logger.error(f"Failed to patch Memory for GraphRAG hooks: {e}")
