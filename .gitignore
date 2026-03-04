@@ -72,3 +72,18 @@ AGENTS.md
 
 # Test Scripts
 src/test_memory_sync.py
+
+# Support & Recovery Scripts (Private to User)
+verify_faiss.py
+force_sync_neo4j.py
+verify_agent_report.py
+cleanup_tokens.py
+exact_id_restore.py
+
+# Debugging Scripts
+debug_ids.py
+inspect_pkl.py
+migrate_recovered.py
+restore_final.py
+verify_project_ids.py
+enrich_graph.py

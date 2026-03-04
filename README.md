@@ -29,7 +29,19 @@ NEO4J_USER=neo4j
 NEO4J_PASSWORD=<your-password>
 ```
 
-Then restart Agent Zero. That's it.
+Then restart Agent Zero.
+
+### Verify Installation
+You can verify that your FAISS index and Neo4j graph are correctly aligned by running the verification script from within your Agent Zero directory:
+
+```bash
+# General health check
+python scripts/verify_memory.py
+
+# Check specifically for expected memory IDs
+python scripts/verify_memory.py --present <memory_id_1>,<memory_id_2>
+```
+If this check fails, you can use your Agent Zero Agent to diagnose and fix the issue.
 
 ---
 
