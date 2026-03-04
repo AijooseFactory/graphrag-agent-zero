@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 class Neo4jConfig:
     """Configuration for Neo4j connection"""
     uri: str = "bolt://localhost:7687"
+    http_uri: str = "http://localhost:7474"
     user: str = "neo4j"
     password: str = "graphrag2026"
     database: str = "neo4j"
@@ -34,6 +35,7 @@ class Neo4jConfig:
         """Load configuration from environment variables"""
         return cls(
             uri=os.getenv("NEO4J_URI", "bolt://localhost:7687"),
+            http_uri=os.getenv("NEO4J_HTTP_URI", "http://localhost:7474"),
             user=os.getenv("NEO4J_USER", "neo4j"),
             password=os.getenv("NEO4J_PASSWORD", "graphrag2026"),
             database=os.getenv("NEO4J_DATABASE", "neo4j"),

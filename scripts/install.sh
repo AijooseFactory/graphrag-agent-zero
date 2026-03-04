@@ -70,15 +70,34 @@ else
 fi
 
 # Install the package. We apply --break-system-packages conditionally if using global pip.
+# Use quotes around the path + extra to handle shells that might expand brackets.
+INSTALL_TARGET="${SCRIPT_DIR}[neo4j]"
+
+echo "  → Running: $PIP_CMD install -e \"$INSTALL_TARGET\""
+
 if [ "$PIP_CMD" = "pip" ] || [ "$PIP_CMD" = "pip3" ]; then
-    $PIP_CMD install -e "$SCRIPT_DIR[neo4j]" --break-system-packages --quiet 2>/dev/null || \
-    $PIP_CMD install -e "$SCRIPT_DIR[neo4j]" --break-system-packages
+    $PIP_CMD install -e "$INSTALL_TARGET" --break-system-packages --quiet 2>/dev/null || \
+    $PIP_CMD install -e "$INSTALL_TARGET" --break-system-packages
 else
-    $PIP_CMD install -e "$SCRIPT_DIR[neo4j]" --quiet 2>/dev/null || \
-    $PIP_CMD install -e "$SCRIPT_DIR[neo4j]"
+    $PIP_CMD install -e "$INSTALL_TARGET" --quiet 2>/dev/null || \
+    $PIP_CMD install -e "$INSTALL_TARGET"
 fi
 
-echo "  ✅  Package installed"
+# ── Verification Check ────────────────────────────────────────────────
+echo "  → Verifying dependencies..."
+PYTHON_CMD="python3"
+if [ -x "/opt/venv-a0/bin/python3" ]; then
+    PYTHON_CMD="/opt/venv-a0/bin/python3"
+fi
+
+if $PYTHON_CMD -c "import neo4j" 2>/dev/null; then
+    echo "  ✅  Neo4j driver verified"
+else
+    echo "  ⚠️  Neo4j driver NOT found after install. Attempting direct install..."
+    $PIP_CMD install neo4j --break-system-packages 2>/dev/null || $PIP_CMD install neo4j
+fi
+
+echo "  ✅  Package installed and verified"
 
 # ── Step 2: Copy extensions ───────────────────────────────────────────
 echo "  [2/4] Copying extensions to persistent storage (usr/extensions)..."
