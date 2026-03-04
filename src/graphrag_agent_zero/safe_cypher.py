@@ -82,6 +82,12 @@ SAFE_CYPHER_TEMPLATES = {
         SET e += $properties, e.updated_at = datetime()
         RETURN e
     """,
+    "batch_merge_entities": """
+        UNWIND $entities AS e
+        MERGE (n:Entity {name: e.name, type: e.type})
+        SET n += coalesce(e.properties, {}), n.updated_at = datetime()
+        RETURN count(n) as merged_count
+    """,
     "get_counts": """
         MATCH (n:Entity)
         RETURN n.type as label, count(n) as count
@@ -121,6 +127,15 @@ for rel in ALLOWED_RELATIONSHIPS:
         SET r += $properties, r.updated_at = datetime()
         RETURN r
     """
+    
+    SAFE_CYPHER_TEMPLATES[f"batch_merge_rel_{rel.lower()}"] = f"""
+        UNWIND $relationships AS rel_data
+        MATCH (a:Entity {{name: rel_data.source}})
+        MATCH (b:Entity {{name: rel_data.target}})
+        MERGE (a)-[r:{rel}]->(b)
+        SET r += coalesce(rel_data.properties, {{}}), r.updated_at = datetime()
+        RETURN count(r) as merged_count
+    """
 
 def get_safe_query(template_name: str) -> Optional[str]:
     """
@@ -151,5 +166,14 @@ def validate_parameters(parameters: Dict[str, Any]) -> bool:
         if not isinstance(parameters["limit"], int) or parameters["limit"] > 1000:
             logger.warning(f"Unsafe limit scale blocked: {parameters['limit']}")
             parameters["limit"] = 100  # Enforce a safe, sensible default
+            
+    # Allowlist array parameter types for Batch UNWIND
+    if "entities" in parameters:
+        if not isinstance(parameters["entities"], list):
+            return False
+            
+    if "relationships" in parameters:
+        if not isinstance(parameters["relationships"], list):
+            return False
             
     return True

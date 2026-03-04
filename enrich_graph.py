@@ -19,12 +19,12 @@ async def enrich_existing_graph():
     Crawls existing Document nodes in Neo4j and extracts relationships 
     for those that are currently isolated (0 outgoing relationships).
     """
-    # Force credentials/env for host run
-    os.environ["GRAPH_RAG_ENABLED"] = "true"
-    os.environ["NEO4J_URI"] = "bolt://localhost:7687"
-    os.environ["NEO4J_USER"] = "neo4j"
-    os.environ["NEO4J_PASSWORD"] = "B@b@tund3!"
-    os.environ["NEO4J_DATABASE"] = "macs-graphrag"
+    # Use environment variables with sensible fallbacks
+    os.environ["GRAPH_RAG_ENABLED"] = os.getenv("GRAPH_RAG_ENABLED", "true")
+    os.environ["NEO4J_URI"] = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    os.environ["NEO4J_USER"] = os.getenv("NEO4J_USER", "neo4j")
+    os.environ["NEO4J_PASSWORD"] = os.getenv("NEO4J_PASSWORD", "B@b@tund3!")
+    os.environ["NEO4J_DATABASE"] = os.getenv("NEO4J_DATABASE", "graphrag-agent-zero-neo4j")
 
     connector = get_connector()
     builder = GraphBuilder(extract_llm=True)

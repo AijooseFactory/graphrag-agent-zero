@@ -129,8 +129,78 @@ class GraphBuilder:
         result = self.connector.execute_template(f"merge_rel_{rel_type.lower()}", params)
         return result is not None
     
+    def _write_to_dlq(self, payload: Dict[str, Any], error: str):
+        """Append failed extractions to Dead Letter Queue to guarantee ZERO data loss."""
+        import json
+        from datetime import datetime
+        dlq_path = "/a0/usr/memory/default/dlq.json"
+        
+        # Fallback for Mac host diagnostics
+        if not os.path.exists("/a0"):
+            dlq_path = os.path.join(os.path.dirname(__file__), "../../../agent-zero-fork/usr/memory/default/dlq.json")
+            
+        os.makedirs(os.path.dirname(dlq_path), exist_ok=True)
+        
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "error": str(error),
+            "payload": payload
+        }
+        try:
+            with open(dlq_path, "a") as f:
+                f.write(json.dumps(entry) + "\n")
+            logger.error(f"GraphRAG: Failed payload secured in Dead Letter Queue")
+        except Exception as e:
+            logger.critical(f"GraphRAG DLQ FAILURE: {e}")
+
+    def _sanitize_properties(self, props: Any) -> Dict[str, Any]:
+        """Neo4j rejects nested dictionaries as properties. This sanitizes LLM output."""
+        if not isinstance(props, dict):
+            return {}
+            
+        import json
+        clean = {}
+        for k, v in props.items():
+            if v is None:
+                continue
+            if isinstance(v, (dict, list)):
+                # Stringify complex nested objects recursively
+                clean[str(k)] = json.dumps(v)
+            else:
+                clean[str(k)] = v
+        return clean
+
+    def deduplicate_entities(self, entities_data: List[Dict]) -> List[Dict]:
+        """2026 Best Practice: In-memory Entity Resolution via name normalization."""
+        seen = {}
+        for ent in entities_data:
+            name = ent.get("name")
+            if not name: continue
+            
+            # Normalize: lowercase, strip whitespace and punctuation
+            norm_name = re.sub(r'[^\w\s]', '', name.lower().strip())
+            
+            if norm_name not in seen:
+                # Ensure type is allowlisted
+                ent_type = ent.get("type", "Concept")
+                if ent_type not in self.ALLOWED_ENTITY_TYPES:
+                    ent["type"] = "Concept"
+                    
+                # Sanitize initial properties
+                ent["properties"] = self._sanitize_properties(ent.get("properties", {}))
+                seen[norm_name] = ent
+            else:
+                # Merge properties if duplicate found
+                existing_props = seen[norm_name].get("properties", {})
+                new_props = self._sanitize_properties(ent.get("properties", {}))
+                
+                existing_props.update(new_props)
+                seen[norm_name]["properties"] = existing_props
+        
+        return list(seen.values())
+
     def build_from_document(self, doc: Dict[str, Any]) -> bool:
-        """Build graph nodes and edges from a document"""
+        """Build graph nodes and edges from a document via Batch Processing"""
         if not is_neo4j_available():
             return False
         
@@ -138,7 +208,7 @@ class GraphBuilder:
         if not doc_id:
             return False
         
-        # Create document entity
+        # 1. Create document entity
         content = doc.get("content", "")
         doc_entity = Entity(
             name=doc_id,
@@ -157,56 +227,68 @@ class GraphBuilder:
             logger.debug(f"GraphRAG: running LLM extraction for {doc_id}")
             result = self.llm_extractor.extract(content)
             
-            # Upsert entities
-            for ent_data in result.get("entities", []):
-                name = ent_data.get("name")
-                if not name:
-                    continue
+            try:
+                # Deduplicate raw entities before database injection
+                raw_entities = result.get("entities", [])
+                deduped_entities = self.deduplicate_entities(raw_entities)
                 
-                entity = Entity(
-                    name=name,
-                    type=ent_data.get("type", "Concept"),
-                    properties=ent_data.get("properties")
-                )
-                self.upsert_entity(entity)
+                # Batch 1: Entities
+                if deduped_entities:
+                    batch_res = self.connector.execute_template("batch_merge_entities", {"entities": deduped_entities})
+                    if batch_res is None:
+                        raise Exception("Batch Entity merge returned None (Template failure)")
                 
-                # Link to document
-                self.upsert_relationship(Relationship(
-                    source=doc_id,
-                    target=name,
-                    type="MENTIONS"
-                ))
-            
-            # Upsert inter-entity relationships
-            for rel_data in result.get("relationships", []):
-                src = rel_data.get("source")
-                tgt = rel_data.get("target")
-                if not src or not tgt:
-                    continue
+                # Automatically link all deduplicated entities to Document
+                doc_mentions = []
+                for ent in deduped_entities:
+                    doc_mentions.append({
+                        "source": doc_id,
+                        "target": ent["name"],
+                        "properties": {}
+                    })
+                if doc_mentions:
+                    self.connector.execute_template("batch_merge_rel_mentions", {"relationships": doc_mentions})
                 
-                rel = Relationship(
-                    source=src,
-                    target=tgt,
-                    type=rel_data.get("type", "RELATED_TO"),
-                    properties=rel_data.get("properties")
-                )
-                self.upsert_relationship(rel)
+                # Batch 2: Relationships (Grouped by Type for safe interpolation)
+                rel_batches = {}
+                for rel_data in result.get("relationships", []):
+                    src = rel_data.get("source")
+                    tgt = rel_data.get("target")
+                    if not src or not tgt: continue
+                    
+                    rel_type = rel_data.get("type", "RELATED_TO").upper().replace(" ", "_")
+                    if rel_type not in self.ALLOWED_RELATIONSHIPS:
+                        rel_type = "RELATED_TO"
+                        
+                    if rel_type not in rel_batches:
+                        rel_batches[rel_type] = []
+                        
+                    rel_batches[rel_type].append({
+                        "source": src,
+                        "target": tgt,
+                        "properties": self._sanitize_properties(rel_data.get("properties", {}))
+                    })
+                    
+                for rel_type, rel_list in rel_batches.items():
+                    rel_res = self.connector.execute_template(f"batch_merge_rel_{rel_type.lower()}", {"relationships": rel_list})
+                    if rel_res is None:
+                        raise Exception(f"Batch Relationship merge failed for type {rel_type}")
+
+            except Exception as e:
+                logger.error(f"GraphRAG: Batch ingestion failed, routing to DLQ. Error: {e}")
+                self._write_to_dlq(result, str(e))
 
         # 3. Regex Extraction (Fast-path / Fallback)
         references = self._extract_references(content)
         
-        for ref in references:
-            # Create reference entity
-            ref_entity = Entity(name=ref, type="Document")
-            self.upsert_entity(ref_entity)
+        # We can also batch these references
+        ref_entities = [{"name": ref, "type": "Document", "properties": {}} for ref in references]
+        if ref_entities:
+            self.connector.execute_template("batch_merge_entities", {"entities": ref_entities})
             
-            # Create relationship
-            rel = Relationship(
-                source=doc_id,
-                target=ref,
-                type="REFERENCES"
-            )
-            self.upsert_relationship(rel)
+        ref_rels = [{"source": doc_id, "target": ref, "properties": {}} for ref in references]
+        if ref_rels:
+            self.connector.execute_template("batch_merge_rel_references", {"relationships": ref_rels})
         
         return True
     

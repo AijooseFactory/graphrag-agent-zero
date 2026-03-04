@@ -86,6 +86,25 @@ class GraphRAGExtension(Extension):
        verification gates for the E2E bash scripting. Do not add API keys to test files.
     """
 
+    async def system_prompt(self, system_prompt: list, loop_data=None, **kwargs):
+        """
+        Injects the anti-hallucination guard rails for GraphRAG memory tools natively 
+        into the agent's core instructions, ensuring portable compliance across ALL installs.
+        """
+        from graphrag_agent_zero.extension_hook import is_enabled
+        if not is_enabled():
+            return
+
+        system_prompt.append(
+            "\n\n--- 🧠 GRAPHRAG MEMORY BRAIN CONTROLS ---\n"
+            "You are equipped with a GraphRAG Hybrid Memory System.\n"
+            "CRITICAL DIRECTIVES FOR MEMORY TOOLS:\n"
+            "1. NO SIMULATIONS: You are explicitly forbidden from generating 'simulated' markdown reports of saving or deleting memories if you did not physically invoke the `memory_save` or `memory_delete` tools.\n"
+            "2. FACTUAL VERIFICATION REQUIRED: You must never report that a memory was successfully saved until you have actively verified its existence in the database by physically calling `memory_load` to retrieve it.\n"
+            "3. HYGIENE: If instructed to test or purge a memory, you must physically call `memory_delete` with the exact ID.\n"
+            "Failure to use the actual JSON tool APIs for these actions is a severe violation of your core cognitive parameters."
+        )
+
     async def execute(self, loop_data=None, **kwargs):
         """
         Main execution hook called by the Agent Zero message loop.
