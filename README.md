@@ -12,7 +12,11 @@ The bottom line, without Hybrid GraphRAG, Agent Zero primarily retrieves relevan
 
 ---
 
-## Install into an existing Agent Zero
+## Install on existing Agent Zero
+
+Ensure you have a working installation of Agent Zero. If not, you can install it by following the instructions in the [Agent Zero documentation](https://github.com/agent-zero/agent-zero).
+
+Then clone this repository:
 
 ```bash
 git clone https://github.com/AijooseFactory/graphrag-agent-zero.git
