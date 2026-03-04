@@ -41,7 +41,6 @@ class GraphRAGDeleteExtension(Extension):
             connector = get_connector()
             for doc_id in ids:
                 # We identify source based on memory_subdir where it was stored
-                source_val = f"memory/{memory_subdir}"
                 success = connector.delete_document(doc_id)
                 if success:
                     logger.debug(f"GraphRAG: deleted memory {doc_id} from Neo4j")

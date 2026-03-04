@@ -8,7 +8,7 @@ entity and relationship extraction with reasoning.
 import os
 import json
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any
 import litellm
 
 logger = logging.getLogger(__name__)

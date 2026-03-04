@@ -160,7 +160,8 @@ class GraphBuilder:
             # Upsert entities
             for ent_data in result.get("entities", []):
                 name = ent_data.get("name")
-                if not name: continue
+                if not name:
+                    continue
                 
                 entity = Entity(
                     name=name,
@@ -180,7 +181,8 @@ class GraphBuilder:
             for rel_data in result.get("relationships", []):
                 src = rel_data.get("source")
                 tgt = rel_data.get("target")
-                if not src or not tgt: continue
+                if not src or not tgt:
+                    continue
                 
                 rel = Relationship(
                     source=src,

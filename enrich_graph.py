@@ -8,8 +8,8 @@ import json
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(current_dir, "src"))
 
-from graphrag_agent_zero.neo4j_connector import get_connector
-from graphrag_agent_zero.graph_builder import GraphBuilder
+from graphrag_agent_zero.neo4j_connector import get_connector # noqa: E402
+from graphrag_agent_zero.graph_builder import GraphBuilder # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("enrichment")
