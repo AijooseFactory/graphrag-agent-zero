@@ -1,6 +1,6 @@
 # 🧠 Hybrid GraphRAG for Agent Zero  
 
-Hybrid GraphRAG is an intelligence-boosting extension for Agent Zero that adds a structured Neo4j knowledge graph on top of native memory, so the agent doesn’t just retrieve text snippets. It can understand how your information connects, follow relationships across your corpus, and use that structure to deliver clearer, more grounded answers.
+Hybrid GraphRAG is an intelligence-boosting extension for Agent Zero that adds a structured Neo4j knowledge graph on top of native memory, so the agent doesn’t just retrieve text snippets. It can understand how your information connects, follow relationships across your corpus, and use that structure to deliver clearer, more grounded responses.
 
 Instead of treating your data as isolated chunks, Hybrid GraphRAG helps Agent Zero connect people, projects, systems, and concepts across documents and time. That means it can uncover dependencies that aren’t obvious from simple similarity search alone and provide more complete context when making recommendations or explaining decisions.
 
