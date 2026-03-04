@@ -87,4 +87,4 @@ Run the one-command verification suite. It spins up an isolated Docker test to e
 
 ---
 
-*By [George Freeny Jr.](https://github.com/AijooseFactory) and the Ai joose Factory • MIT License*
+*By [George Freeney Jr.](https://github.com/AijooseFactory) and the Ai joose Factory • MIT License*
