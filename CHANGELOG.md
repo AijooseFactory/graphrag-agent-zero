@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-03-03
+### Added
+- **High-Fidelity LLM Extraction**: New `LLMExtractor` with "Think and Reason" prompt support and a robust multi-stage JSON parser for better relationship identification.
+- **Mandatory Content Persistence**: Documents now always store raw `content` in Neo4j nodes to enable late enrichment and traceability.
+- **Improved Relationship Allowlist**: Added `WORKS_ON`, `PART_OF`, and `MEMBER_OF` to the standardized relationship types.
+- **Utilities**: Added `enrich_graph.py` for backfilling relationships and `extract_content.py` for diagnostic exports.
+
+### Fixed
+- **Extraction Ruggedness**: Multi-stage parser handles models that interleave reasoning text with JSON blocks.
+- **Dependency Missing**: Added `litellm`, `neo4j`, and `langchain-community` with explicit version floors to `pyproject.toml`.
+
 ## [0.1.1] - 2026-03-02
 ### Fixed
 - **Persistent Architecture**: Migrated all GraphRAG extensions to the persistent `usr/extensions/` volume, ensuring configurations and patches survive Docker container recreations.
