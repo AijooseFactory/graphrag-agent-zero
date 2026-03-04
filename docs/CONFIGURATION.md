@@ -1,30 +1,28 @@
-# Configuration Reference
+# Hybrid GraphRAG for Agent Zero - Configuration
+# ----------------------------------------------
 
-All Hybrid GraphRAG settings are controlled via environment variables in your Agent Zero `.env` file.
+This document describes the environment variables used to configure the extension.
+All variables should be set in your `.env` file in the Agent Zero root directory.
 
-## Feature Flag
+## Core Settings
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `GRAPH_RAG_ENABLED` | `false` | Master switch. Set to `true` to enable Hybrid GraphRAG. |
+| `GRAPH_RAG_ENABLED` | `false` | Primary feature flag. Set to `true` to enable. |
+| `GRAPHRAG_ENABLED` | `false` | Alias for `GRAPH_RAG_ENABLED`. |
 
 ## Neo4j Connection
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NEO4J_URI` | `bolt://localhost:7687` | Neo4j Bolt endpoint. Use `bolt://host.docker.internal:7687` if Agent Zero runs in Docker and Neo4j runs on the host. |
-| `NEO4J_USER` | `neo4j` | Neo4j username. |
-| `NEO4J_PASSWORD` | `graphrag2026` | Neo4j password. **Change this.** |
-| `NEO4J_DATABASE` | `neo4j` | Neo4j database name. |
+| `NEO4J_URI` | `bolt://localhost:7687` | Connection string for Neo4j. |
+| `NEO4J_USER` | `neo4j` | Database username. |
+| `NEO4J_PASSWORD` | `graphrag2026` | Database password. |
+| `NEO4J_DATABASE` | `neo4j` | Database name. |
+| `NEO4J_CONNECTION_TIMEOUT_MS` | `5000` | Connection attempt timeout. |
+| `NEO4J_QUERY_TIMEOUT_MS` | `10000` | Individual query timeout. |
 
-## Timeouts
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `NEO4J_CONNECTION_TIMEOUT_MS` | `5000` | Connection timeout in milliseconds. |
-| `NEO4J_QUERY_TIMEOUT_MS` | `10000` | Per-query timeout in milliseconds. |
-
-## Graph Expansion Limits
+## Graph Retrieval Strategy
 
 | Variable | Default | Description |
 |----------|---------|-------------|

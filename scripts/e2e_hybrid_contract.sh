@@ -152,7 +152,9 @@ NEO4J_CONNECTION_TIMEOUT_MS=1200
 NEO4J_QUERY_TIMEOUT_MS=5000
 GRAPH_EXPAND_MAX_HOPS=2
 GRAPH_EXPAND_LIMIT=100
-GRAPH_MAX_RESULTS=50
+GRAPH_MAX_RESULTS=${GRAPH_MAX_RESULTS:-50}
+GRAPHRAG_UTILITY_PROMPT_ENABLED=true
+GRAPHRAG_UTILITY_PROMPT_MODE=append
 EOF_ENV
 }
 
@@ -365,8 +367,7 @@ run_case() {
       CASE_RESULTS["${case_name}"]="FAIL"
       exit 1
     }
-  else
-    if [ "${expect_noop_marker}" = "YES" ]; then
+    if [ "${expect_graph}" = "NO" ] && [ "${expect_noop_marker}" = "YES" ]; then
       echo "${logs}" | grep -q "GRAPHRAG_NOOP_NEO4J_DOWN" || {
         echo "FAIL: ${case_name} missing GRAPHRAG_NOOP_NEO4J_DOWN"
         CASE_RESULTS["${case_name}"]="FAIL"
@@ -374,6 +375,13 @@ run_case() {
       }
     fi
   fi
+
+  # ── Evidence: Utility Prompt Verification ──
+  echo "${logs}" | grep -q "GRAPHRAG_UTILITY_PROMPT_APPLIED" || {
+    echo "FAIL: ${case_name} missing GRAPHRAG_UTILITY_PROMPT_APPLIED"
+    CASE_RESULTS["${case_name}"]="FAIL"
+    exit 1
+  }
 
   CASE_RESULTS["${case_name}"]="PASS"
   echo "PASS: ${case_name}"

@@ -8,6 +8,9 @@ authors = [
 dependencies = [
     "python-dotenv>=1.0.1",
     "nest_asyncio>=1.6.0",
+    "litellm>=1.0.0",
+    "neo4j>=5.17.0",
+    "langchain-community>=0.0.1",
 ]
 requires-python = ">=3.10"
 license = { text = "MIT" }

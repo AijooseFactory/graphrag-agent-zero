@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 SAFE_CYPHER_TEMPLATES = {
     # BASIC UTILITIES
     "check_health": "RETURN 1 as health",
+    "inspect_nodes": "MATCH (n:Entity {type: 'Document'}) RETURN properties(n) as props LIMIT 1",
 
     # NEIGHBORHOOD SEARCH (Multi-hop support)
     "get_neighbors": """
@@ -81,6 +82,19 @@ SAFE_CYPHER_TEMPLATES = {
         SET e += $properties, e.updated_at = datetime()
         RETURN e
     """,
+    "get_counts": """
+        MATCH (n:Entity)
+        RETURN n.type as label, count(n) as count
+    """,
+    "get_rel_counts": """
+        MATCH ()-[r]->()
+        RETURN type(r) as type, count(r) as count
+    """,
+    "get_all_documents": """
+        MATCH (d:Entity {type: 'Document'})
+        RETURN d.name as id, d.content as content, d.title as title
+        LIMIT $limit
+    """,
     
     # Deletion templates
     "delete_document": """
@@ -95,7 +109,8 @@ SAFE_CYPHER_TEMPLATES = {
 ALLOWED_RELATIONSHIPS = [
     "REFERENCES", "CONTAINS", "MENTIONS", "DEPENDS_ON", 
     "RELATED_TO", "SUPERSEDES", "AMENDS", "AUTHORED_BY", 
-    "ASSIGNED_TO", "AFFECTS"
+    "ASSIGNED_TO", "AFFECTS", "MANAGED_BY", "WORKS_ON",
+    "PART_OF", "MEMBER_OF"
 ]
 
 for rel in ALLOWED_RELATIONSHIPS:

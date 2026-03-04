@@ -16,6 +16,7 @@ from dataclasses import dataclass
 import hashlib
 
 from .neo4j_connector import is_neo4j_available, get_connector
+from .llm_extractor import LLMExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -72,10 +73,15 @@ class GraphBuilder:
         "AUTHORED_BY",
         "ASSIGNED_TO",
         "AFFECTS",
+        "WORKS_ON",
+        "PART_OF",
+        "MEMBER_OF",
     ]
     
-    def __init__(self):
+    def __init__(self, extract_llm: bool = True):
         self.connector = get_connector()
+        self.extract_llm = extract_llm
+        self.llm_extractor = LLMExtractor() if extract_llm else None
     
     def _generate_entity_id(self, name: str, entity_type: str) -> str:
         """Generate deterministic entity ID"""
@@ -108,7 +114,7 @@ class GraphBuilder:
             return False
         
         # Normalize and validate relationship type
-        rel_type = relationship.type.upper()
+        rel_type = relationship.type.upper().replace(" ", "_")
         if rel_type not in self.ALLOWED_RELATIONSHIPS:
             rel_type = "RELATED_TO"
         
@@ -140,12 +146,51 @@ class GraphBuilder:
             properties={
                 "title": doc.get("title", ""),
                 "source": doc.get("source", ""),
+                "content": content,
                 "content_hash": hashlib.sha256(content.encode()).hexdigest()[:16],
             }
         )
         self.upsert_entity(doc_entity)
         
-        # Extract references from content
+        # 2. LLM Extraction (High-fidelity)
+        if self.extract_llm and self.llm_extractor:
+            logger.debug(f"GraphRAG: running LLM extraction for {doc_id}")
+            result = self.llm_extractor.extract(content)
+            
+            # Upsert entities
+            for ent_data in result.get("entities", []):
+                name = ent_data.get("name")
+                if not name: continue
+                
+                entity = Entity(
+                    name=name,
+                    type=ent_data.get("type", "Concept"),
+                    properties=ent_data.get("properties")
+                )
+                self.upsert_entity(entity)
+                
+                # Link to document
+                self.upsert_relationship(Relationship(
+                    source=doc_id,
+                    target=name,
+                    type="MENTIONS"
+                ))
+            
+            # Upsert inter-entity relationships
+            for rel_data in result.get("relationships", []):
+                src = rel_data.get("source")
+                tgt = rel_data.get("target")
+                if not src or not tgt: continue
+                
+                rel = Relationship(
+                    source=src,
+                    target=tgt,
+                    type=rel_data.get("type", "RELATED_TO"),
+                    properties=rel_data.get("properties")
+                )
+                self.upsert_relationship(rel)
+
+        # 3. Regex Extraction (Fast-path / Fallback)
         references = self._extract_references(content)
         
         for ref in references:
