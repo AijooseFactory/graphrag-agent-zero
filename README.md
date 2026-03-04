@@ -1,12 +1,14 @@
-# Hybrid GraphRAG for Agent Zero (v0.2.0)
+# 🧠 Hybrid GraphRAG for Agent Zero  
 
-Add a **Neo4j knowledge graph** to Agent Zero's memory. Fully dynamic and persistent — uses safe `agent_init` hooks to integrate cleanly without touching or modifying Agent Zero's core files.
+Hybrid GraphRAG is an intelligence-boosting extension for Agent Zero that adds a structured Neo4j knowledge graph on top of native memory, so the agent doesn’t just retrieve text snippets. It can understand how your information connects, follow relationships across your corpus, and use that structure to deliver clearer, more grounded answers.
 
-### 🌟 New in v0.2.0: Resilience & Cognitive Optimization
-- **Cognitive Optimization**: Injects a mission-critical "Intellectual Research" framework into the agent's core reasoning system.
-- **Enterprise Resilience**: Adaptive Neo4j Circuit Breaker and Jittered Exponential Backoff for mission-critical reliability.
-- **Hybrid Retrieval (SPEP v2)**: High-performance LRU+TTL caching and tiered extraction (Hybrid NER) to slash token costs and latency.
-- **Real-time Sync**: Automatic graph indexing of new memories via the `memory_saved_after` extension hook.
+Instead of treating your data as isolated chunks, Hybrid GraphRAG helps Agent Zero connect people, projects, systems, and concepts across documents and time. That means it can uncover dependencies that aren’t obvious from simple similarity search alone and provide more complete context when making recommendations or explaining decisions.
+
+Hybrid GraphRAG also improves reliability by grounding outputs in explicit entities and relationships. This reduces confusion in cases where the same term can mean different things in different contexts, and it makes the agent’s conclusions easier to verify because the supporting links and sources can be traced back to the underlying graph and memory.
+
+For teams and individuals, the practical value is that Agent Zero becomes closer to an institutional expert. It can support deeper software engineering work like dependency analysis and impact assessment, improve research workflows by surfacing non-obvious connections, assist legal and compliance efforts by mapping related clauses and policies, and strengthen strategic planning by keeping resources, constraints, and relationships organized and explainable.
+
+The bottom line is simple: without Hybrid GraphRAG, Agent Zero primarily retrieves relevant snippets; with Hybrid GraphRAG, it can reason across your knowledge using entities and relationships, producing better context, clearer explanations, and more trustworthy results.
 
 ---
 
