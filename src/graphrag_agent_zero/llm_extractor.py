@@ -48,23 +48,68 @@ class LLMExtractor:
                             api_base = api_base.replace("host.docker.internal", "localhost")
                         litellm.api_base = api_base
             
+            # Load the Gemini Deep Research optimization prompt
+            prompt_path = os.path.join(os.path.dirname(__file__), "prompts", "gemini_deep_research.md")
+            self.system_optimization = ""
+            if os.path.exists(prompt_path):
+                with open(prompt_path, "r") as f:
+                    self.system_optimization = f.read()
+                    logger.info("GraphRAG: Utility Model optimized with Gemini Deep Research prompt")
+            
             logger.info(f"GraphRAG: Using Utility Model {self.model_name} via {self.provider}")
         except Exception as e:
             logger.warning(f"GraphRAG: Failed to load settings for LLMExtractor: {e}")
 
+    def _fast_ner_extraction(self, text: str) -> list:
+        """Zero-token heuristic extraction for baseline entities (Classes, Paths, Concepts)"""
+        import re
+        entities = []
+        seen = set()
+        
+        # 1. CamelCase/PascalCase (Code Classes/Functions)
+        for m in re.finditer(r'\b([A-Z][a-z]+[A-Z][A-Za-z]+)\b', text):
+            name = m.group(1)
+            if name not in seen:
+                entities.append({"name": name, "type": "Component", "properties": {"description": "Auto-extracted Component"}})
+                seen.add(name)
+                
+        # 2. File paths
+        for m in re.finditer(r'\b(/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)\b', text):
+            name = m.group(1)
+            if name not in seen:
+                entities.append({"name": name, "type": "Document", "properties": {"description": "Auto-extracted File Path"}})
+                seen.add(name)
+                
+        # 3. Capitalized Phrases (Names/Concepts)
+        for m in re.finditer(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})\b', text):
+            name = m.group(1)
+            if name not in seen:
+                entities.append({"name": name, "type": "Concept", "properties": {"description": "Auto-extracted Concept"}})
+                seen.add(name)
+                
+        return entities
+
     def extract(self, text: str) -> Dict[str, Any]:
         """
-        Extract entities and relationships from the provided text.
+        Extract entities and relationships using the tiered Hybrid NER Pipeline.
         """
+        # Tier 1: Fast NER Pass
+        baseline_entities = self._fast_ner_extraction(text)
+        baseline_json = json.dumps(baseline_entities, indent=2) if baseline_entities else "[]"
+        
+        # Tier 2: Deep LLM Relationship Extraction
         prompt = f"""
 ### TASK
 Extract all significant entities and their relationships from the text below for a knowledge graph.
 
+### FAST NER BASELINE
+A fast heuristic pass has already identified these baseline entities. You MUST include them in your final output array, but your primary job is to find the complex RELATIONSHIPS between them (and any other entities you discover).
+{baseline_json}
+
 ### GUIDELINES
-1. **Think and Reason**: First, analyze the text to identify the primary subjects, objects, and how they interact. 
+1. **Think and Reason**: First, analyze the text to identify how the entities interact. 
 2. **Entity Types**: Categorize entities into these standard types: Person, Team, System, Component, Concept, Event, Decision, Incident, Change, or Document.
 3. **Relationship Types**: Use meaningful relationship types such as REFERENCES, CONTAINS, MENTIONS, DEPENDS_ON, RELATED_TO, AUTHORED_BY, AFFECTS, MANAGED_BY, or WORKS_ON.
-4. **Consistency**: Ensure entity names are consistent throughout and relationships are logically sound.
 
 ### TEXT TO ANALYZE
 {text}
@@ -85,12 +130,17 @@ Structure:
         try:
             model_id = f"{self.provider}/{self.model_name}" if self.provider != "openai" else self.model_name
             
+            # Tier 2: Deep LLM Relationship Extraction
+            messages = []
+            if self.system_optimization:
+                messages.append({"role": "system", "content": self.system_optimization})
+            
+            messages.append({"role": "user", "content": prompt})
+            
             # Call litellm with a long timeout for reasoning models
             response = litellm.completion(
                 model=model_id,
-                messages=[{"role": "user", "content": prompt}],
-                # Note: some local models struggle with response_format="json_object"
-                # while others (reasoning models) ignore it and explain first.
+                messages=messages,
                 timeout=180
             )
             

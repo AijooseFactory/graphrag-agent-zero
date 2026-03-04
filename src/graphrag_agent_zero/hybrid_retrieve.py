@@ -16,8 +16,10 @@ from dataclasses import dataclass, field
 # Handle both package and direct imports
 try:
     from .neo4j_connector import is_neo4j_available, get_connector
+    from .cache import LRUTTLCache
 except ImportError:
     from neo4j_connector import is_neo4j_available, get_connector
+    from cache import LRUTTLCache
 
 logger = logging.getLogger(__name__)
 
@@ -88,27 +90,16 @@ class HybridRetriever:
         self.query_timeout_ms = query_timeout_ms
         
         # INTERNAL CACHE: Minimizes expensive Bolt roundtrips.
-        # Flushes periodically to ensure consistency with fresh graph updates.
-        self._entity_cache: Dict[str, List[str]] = {}
-        self._cache_ttl = 3600  # 1 hour
-        self._cache_timestamps: Dict[str, float] = {}
-    
-    def _is_cache_valid(self, key: str) -> bool:
-        """Check if cache entry is still valid"""
-        if key not in self._cache_timestamps:
-            return False
-        return time.time() - self._cache_timestamps[key] < self._cache_ttl
+        # Implements bounded LRU memory constraint with TTL flush.
+        self._entity_cache = LRUTTLCache(capacity=5000, ttl_seconds=3600)
     
     def _get_cached(self, key: str) -> Optional[Any]:
         """Get cached value if valid"""
-        if self._is_cache_valid(key):
-            return self._entity_cache.get(key)
-        return None
+        return self._entity_cache.get(key)
     
     def _set_cache(self, key: str, value: Any):
         """Set cache value with timestamp"""
-        self._entity_cache[key] = value
-        self._cache_timestamps[key] = time.time()
+        self._entity_cache.set(key, value)
     
     def retrieve(
         self,
@@ -167,11 +158,7 @@ class HybridRetriever:
     ) -> RetrievalResult:
         """
         The multi-stage GraphRAG pipeline.
-        
-        MAINTENANCE NOTE for Mac: Focus here if you intend to add 
-        reranking or more advanced path discovery.
         """
-        
         # 1. PINNING: Identify which documents we're starting from
         seed_doc_ids = []
         for result in vector_results:
@@ -183,10 +170,12 @@ class HybridRetriever:
             return self._query_only_graph_retrieval(query, vector_results, start_time)
         
         # 2. SEED: Get entities associated with those documents
-        entities = self._get_entities_for_docs(seed_doc_ids)
+        entities, hit_entities = self._get_entities_for_docs_with_meta(seed_doc_ids)
         
         # 3. EXPAND: Wander the graph to find hidden connections
-        expanded_entities, relationships = self._expand_graph(entities)
+        expanded_entities, relationships, hit_expand = self._expand_graph_with_meta(entities)
+        
+        cache_hit = hit_entities or hit_expand
         
         # 4. DISCOVER: Find docs linked to these new entities
         related_docs = self._get_related_documents(seed_doc_ids)
@@ -201,6 +190,7 @@ class HybridRetriever:
             relationships=relationships,
             graph_derived=True,
             latency_ms=(time.time() - start_time) * 1000,
+            cache_hit=cache_hit,
         )
 
     def _query_only_graph_retrieval(
@@ -284,14 +274,32 @@ class HybridRetriever:
                 lines.append(f"{name} ({entity_type})")
 
         return "\n".join(lines)
-    
-    def _get_entities_for_docs(self, doc_ids: List[str]) -> List[str]:
-        """Get entities mentioned in documents"""
+
+    def _get_entities_for_docs_with_meta(self, doc_ids: List[str]) -> Tuple[List[str], bool]:
+        """Get entities for documents and return cache hit status"""
         cache_key = f"entities:{','.join(doc_ids)}"
         cached = self._get_cached(cache_key)
         if cached:
-            return cached
+            return cached, True
         
+        entities = self._get_entities_for_docs(doc_ids)
+        return entities, False
+
+    def _expand_graph_with_meta(
+        self,
+        entities: List[str]
+    ) -> Tuple[List[str], List[Tuple[str, str, str]], bool]:
+        """Expand graph from entities and return cache hit status"""
+        cache_key = f"expand:{','.join(sorted(entities[:20]))}"
+        cached = self._get_cached(cache_key)
+        if cached:
+            return cached[0], cached[1], True
+            
+        res_entities, res_rels = self._expand_graph(entities)
+        return res_entities, res_rels, False
+
+    def _get_entities_for_docs(self, doc_ids: List[str]) -> List[str]:
+        """Get entities mentioned in documents"""
         entities = []
         try:
             connector = get_connector()
@@ -305,10 +313,8 @@ class HybridRetriever:
         except Exception as e:
             logger.warning(f"Entity lookup failed: {e}")
         
-        entities = list(set(entities))[:self.max_entities]
-        self._set_cache(cache_key, entities)
-        return entities
-    
+        return list(set(entities))[:self.max_entities]
+
     def _expand_graph(
         self,
         entities: List[str]
@@ -341,7 +347,7 @@ class HybridRetriever:
             logger.warning(f"Graph expansion failed: {e}")
         
         return list(all_entities)[:self.max_entities], all_relationships
-    
+
     def _get_related_documents(self, doc_ids: List[str]) -> List[str]:
         """Get documents related to seed documents via graph"""
         related = []

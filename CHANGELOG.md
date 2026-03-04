@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-03-04
+### Added
+- **Enterprise Resilience Layer**: Integrated a Neo4j Circuit Breaker and Jittered Exponential Backoff to prevent cascading failures.
+- **Performance Caching (LRU+TTL)**: Subgraph retrieval caching drastically reduces Neo4j overhead and retrieval latency.
+- **Hybrid NER Pipeline**: Tiered extraction pass (Heuristic + LLM) slashes token costs and increases extraction speed.
+- **Utility Model Optimization**: Native support for 'Gemini Deep Research' cognitive system prompts in the primary extraction loop.
+- **Observability Suite**: Structured JSON logging with Correlation IDs and a Prometheus Telemetry endpoint for graph performance monitoring.
+
+### Changed
+- **Hybrid Retriever**: Core SPEP protocol upgraded to utilize the new caching and resilience framework.
+- **LLM Extractor**: Refactored to support tiered extraction and optimized system prompts.
+
 ## [0.1.2] - 2026-03-03
 ### Added
 - **High-Fidelity LLM Extraction**: New `LLMExtractor` with "Think and Reason" prompt support and a robust multi-stage JSON parser for better relationship identification.
