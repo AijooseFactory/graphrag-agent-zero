@@ -48,13 +48,13 @@ class LLMExtractor:
                             api_base = api_base.replace("host.docker.internal", "localhost")
                         litellm.api_base = api_base
             
-            # Load the Gemini Deep Research optimization prompt
-            prompt_path = os.path.join(os.path.dirname(__file__), "prompts", "gemini_deep_research.md")
+            # Load the Cognitive Optimization prompt
+            prompt_path = os.path.join(os.path.dirname(__file__), "prompts", "cognitive_optimization.md")
             self.system_optimization = ""
             if os.path.exists(prompt_path):
                 with open(prompt_path, "r") as f:
                     self.system_optimization = f.read()
-                    logger.info("GraphRAG: Utility Model optimized with Gemini Deep Research prompt")
+                    logger.info("GraphRAG: Utility Model optimized with Cognitive Optimization prompt")
             
             logger.info(f"GraphRAG: Using Utility Model {self.model_name} via {self.provider}")
         except Exception as e:
@@ -145,6 +145,7 @@ Structure:
             )
             
             content = response.choices[0].message.content
+
             
             # MULTI-STAGE PARSER
             json_content = None

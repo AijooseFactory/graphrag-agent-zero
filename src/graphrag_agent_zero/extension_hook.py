@@ -167,10 +167,11 @@ def build_knowledge_graph(documents: List[Dict[str, Any]]) -> Dict[str, int]:
     stats = {"documents": 0, "entities": 0, "relationships": 0}
     
     for doc in documents:
-        if builder.build_from_document(doc):
-            stats["documents"] += 1
+        doc_stats = builder.build_from_document(doc)
+        stats["documents"] += 1
+        stats["entities"] += doc_stats.get("entities", 0)
+        stats["relationships"] += doc_stats.get("relationships", 0)
     
-    # Note: Stats for entities/rels can be expanded here if needed.
     return stats
 
 
@@ -188,3 +189,19 @@ def health_check() -> Dict[str, Any]:
         ),
         "neo4j_uri": os.getenv("NEO4J_URI", "not set"),
     }
+
+
+def get_cognitive_optimization_prompt() -> Optional[str]:
+    """
+    Retrieve the Cognitive Optimization prompt content for injection 
+    into the core agent system prompt.
+    """
+    try:
+        prompt_path = os.path.join(os.path.dirname(__file__), "prompts", "cognitive_optimization.md")
+        if os.path.exists(prompt_path):
+            with open(prompt_path, "r") as f:
+                return f.read()
+    except Exception as e:
+        logger.warning(f"Failed to load cognitive optimization prompt: {e}")
+    return None
+

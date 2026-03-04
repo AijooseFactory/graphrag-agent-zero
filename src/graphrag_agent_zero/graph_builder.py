@@ -199,14 +199,17 @@ class GraphBuilder:
         
         return list(seen.values())
 
-    def build_from_document(self, doc: Dict[str, Any]) -> bool:
+    def build_from_document(self, doc: Dict[str, Any]) -> Dict[str, int]:
         """Build graph nodes and edges from a document via Batch Processing"""
+        stats = {"entities": 0, "relationships": 0}
         if not is_neo4j_available():
-            return False
+            return stats
+
         
         doc_id = doc.get("id") or doc.get("doc_id")
         if not doc_id:
-            return False
+            return stats
+
         
         # 1. Create document entity
         content = doc.get("content", "")
@@ -221,6 +224,8 @@ class GraphBuilder:
             }
         )
         self.upsert_entity(doc_entity)
+        stats["entities"] += 1
+
         
         # 2. LLM Extraction (High-fidelity)
         if self.extract_llm and self.llm_extractor:
@@ -271,8 +276,17 @@ class GraphBuilder:
                     
                 for rel_type, rel_list in rel_batches.items():
                     rel_res = self.connector.execute_template(f"batch_merge_rel_{rel_type.lower()}", {"relationships": rel_list})
-                    if rel_res is None:
+                    if rel_res is not None:
+                        # count based on merged_count result if available, or list length
+                        count = rel_res[0].get("merged_count", len(rel_list)) if rel_res else len(rel_list)
+                        stats["relationships"] += count
+                    else:
                         raise Exception(f"Batch Relationship merge failed for type {rel_type}")
+
+                stats["entities"] += len(deduped_entities)
+                # Linkage to doc adds relationships
+                stats["relationships"] += len(doc_mentions)
+
 
             except Exception as e:
                 logger.error(f"GraphRAG: Batch ingestion failed, routing to DLQ. Error: {e}")
@@ -289,8 +303,11 @@ class GraphBuilder:
         ref_rels = [{"source": doc_id, "target": ref, "properties": {}} for ref in references]
         if ref_rels:
             self.connector.execute_template("batch_merge_rel_references", {"relationships": ref_rels})
+            stats["relationships"] += len(ref_rels)
+            stats["entities"] += len(ref_entities)
         
-        return True
+        return stats
+
     
     def _extract_references(self, content: str) -> List[str]:
         """Extract document references from content"""

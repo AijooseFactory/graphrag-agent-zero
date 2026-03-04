@@ -105,6 +105,16 @@ class GraphRAGExtension(Extension):
             "Failure to use the actual JSON tool APIs for these actions is a severe violation of your core cognitive parameters."
         )
 
+        # Inject Cognitive Optimization Prompt (Deep Synthesis methodology)
+        from graphrag_agent_zero.extension_hook import get_cognitive_optimization_prompt
+        optimized_prompt = get_cognitive_optimization_prompt()
+        if optimized_prompt:
+            system_prompt.append(
+                "\n\n--- 🧠 COGNITIVE OPTIMIZATION: INTELLECTUAL RESEARCH ---\n"
+                f"{optimized_prompt}"
+            )
+            print("GRAPHRAG_COGNITIVE_OPTIMIZATION_INJECTED", flush=True)
+
     async def execute(self, loop_data=None, **kwargs):
         """
         Main execution hook called by the Agent Zero message loop.
@@ -213,3 +223,29 @@ class GraphRAGExtension(Extension):
             # SAFETY: Never crash the main agent message loop.
             # If GraphRAG fails, we log a warning and let the agent proceed normally.
             logger.warning(f"GraphRAG extension error (graceful no-op): {e}")
+
+    async def memory_saved_after(self, memory_id: str, content: str, **kwargs):
+        """
+        Real-time Synchronization Hook.
+        Automatically triggers graph construction after a successful memory save.
+        
+        Args:
+            memory_id: The ID assigned to the new memory (FAISS doc_id).
+            content: The text content of the memory.
+        """
+        if not _check_graphrag():
+            return
+
+        from graphrag_agent_zero.extension_hook import is_enabled, build_knowledge_graph
+        if not is_enabled():
+            return
+
+        try:
+            print(f"GRAPHRAG_SYNC_TRIGGERED: {memory_id}", flush=True)
+            build_knowledge_graph([{"id": memory_id, "content": content}])
+            print(f"GRAPHRAG_SYNC_SUCCESS: {memory_id}", flush=True)
+        except Exception as e:
+            logger.warning(f"GraphRAG real-time sync failed for {memory_id}: {e}")
+
+
+
