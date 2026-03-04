@@ -1,8 +1,12 @@
-# Hybrid GraphRAG for Agent Zero
+# Hybrid GraphRAG for Agent Zero (v0.2.0)
 
 Add a **Neo4j knowledge graph** to Agent Zero's memory. Fully dynamic and persistent — uses safe `agent_init` hooks to integrate cleanly without touching or modifying Agent Zero's core files.
 
-When enabled, Agent Zero's memories are automatically indexed into a graph using **high-fidelity LLM extraction** and used to enrich every prompt with connected context. Documents are fully persisted with raw content in Neo4j, enabling late enrichment and deep traceability. When disabled, Agent Zero behaves exactly like stock. Survives Docker container restarts and wipes automatically since everything lives in the `usr/` volume.
+### 🌟 New in v0.2.0: Resilience & Cognitive Optimization
+- **Cognitive Optimization**: Injects a mission-critical "Intellectual Research" framework into the agent's core reasoning system.
+- **Enterprise Resilience**: Adaptive Neo4j Circuit Breaker and Jittered Exponential Backoff for mission-critical reliability.
+- **Hybrid Retrieval (SPEP v2)**: High-performance LRU+TTL caching and tiered extraction (Hybrid NER) to slash token costs and latency.
+- **Real-time Sync**: Automatic graph indexing of new memories via the `memory_saved_after` extension hook.
 
 ---
 

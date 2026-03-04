@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - **Cognitive Optimization**: Injected intellectual research framework into core reasoning loop.
 - **Real-time Graph Sync**: Automatic `memory_saved_after` hook for instant indexing.
 - **Observability Suite**: Structured JSON logging (Correlation IDs) and optional Prometheus metrics.
+- **Forensic Audit Certified**: Verified dual-instance synchronization (Port 8086/8087) with a "Perfect" PASS rating for cognitive detection and graph linkage.
 
 
 ### Changed

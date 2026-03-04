@@ -70,8 +70,13 @@ USER.md
 IDENTITY.md
 AGENTS.md
 
-# Test Scripts
+# Test Scripts & Artifacts
 src/test_memory_sync.py
+tmp_playwright/
+*.webp
+*.png
+!docs/**/*.png
+!docs/**/*.webp
 
 # Support & Recovery Scripts (Private to User)
 verify_faiss.py

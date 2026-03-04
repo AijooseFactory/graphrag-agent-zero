@@ -86,10 +86,31 @@ class GraphRAGExtension(Extension):
        verification gates for the E2E bash scripting. Do not add API keys to test files.
     """
 
-    async def system_prompt(self, system_prompt: list, loop_data=None, **kwargs):
+    async def execute(self, loop_data=None, system_prompt: list = None, memory_id: str = None, content: str = None, **kwargs):
         """
-        Injects the anti-hallucination guard rails for GraphRAG memory tools natively 
-        into the agent's core instructions, ensuring portable compliance across ALL installs.
+        Polymorphic dispatcher for Agent Zero Extension Hooks.
+        
+        This enables a single 'Master' file to serve multiple extension points:
+        1. system_prompt: kwargs['system_prompt'] is present.
+        2. memory_saved_after: kwargs['memory_id'] is present.
+        3. message_loop_prompts_after: Default execution path.
+        """
+        
+        # Hook 1: Core System Prompt Injection
+        if system_prompt is not None:
+            return await self._handle_system_prompt(system_prompt, loop_data=loop_data, **kwargs)
+
+        # Hook 2: Real-time Memory Synchronization
+        if memory_id is not None and content is not None:
+            return await self._handle_memory_saved_after(memory_id, content, **kwargs)
+
+        # Hook 3: Message Loop Context Injection (Default)
+        return await self._handle_message_loop_prompts(loop_data, **kwargs)
+
+    async def _handle_system_prompt(self, system_prompt: list, loop_data=None, **kwargs):
+        """
+        Injects the anti-hallucination guard rails and Cognitive Optimization
+        natively into the agent's core instructions.
         """
         from graphrag_agent_zero.extension_hook import is_enabled
         if not is_enabled():
@@ -115,49 +136,36 @@ class GraphRAGExtension(Extension):
             )
             print("GRAPHRAG_COGNITIVE_OPTIMIZATION_INJECTED", flush=True)
 
-    async def execute(self, loop_data=None, **kwargs):
+    async def _handle_message_loop_prompts(self, loop_data=None, **kwargs):
         """
-        Main execution hook called by the Agent Zero message loop.
-        
-        Args:
-            loop_data: The state object for the current message loop iteration.
-            kwargs: Additional framework-provided parameters.
+        Original execute logic for message_loop_prompts_after.
         """
-        # Mandatory markers for E2E verification (legacy + current)
+        # Mandatory markers for E2E verification
         print("GRAPHRAG_EXTENSION_EXECUTED", flush=True)
         print("GRAPHRAG_AGENT_EXTENSION_EXECUTED", flush=True)
 
-        # GATE 1: Package Availability Check
-        # Ensures a clean fail if the graphrag-agent-zero package is missing.
         if not _check_graphrag():
             _clear_graphrag_context(loop_data)
             return
 
-        # GATE 2: Feature Flag Check (preferred: GRAPHRAG_ENABLED)
         from graphrag_agent_zero.extension_hook import is_enabled
-
         if not is_enabled():
             _clear_graphrag_context(loop_data)
             return
 
-        # GATE 3: Neo4j Availability Check (Safe Resilience)
-        # Prevents crashing or slowdowns if the graph database is offline.
         from graphrag_agent_zero.extension_hook import (
             is_neo4j_available,
             enhance_retrieval,
         )
 
         if not is_neo4j_available():
-            # Log marker for E2E resilience verification
             print("GRAPHRAG_NOOP_NEO4J_DOWN", flush=True)
             _clear_graphrag_context(loop_data)
             return
 
-        # VALIDATION: Ensure we have loop state to work with
         if loop_data is None:
             return
 
-        # EXTRACT: Get the user's raw input message
         user_msg = ""
         if hasattr(loop_data, "user_message") and loop_data.user_message:
             user_msg = loop_data.user_message.output_text()
@@ -167,71 +175,44 @@ class GraphRAGExtension(Extension):
             return
 
         try:
-            # ENHANCE: Call the core hybrid retrieval logic from the src package
-            # This is where entities are extracted and Neo4j is queried.
             result = enhance_retrieval(
                 query=user_msg,
-                vector_results=[],  # Agent Zero's native memory handles its own vector search
+                vector_results=[],
             )
 
-            # Only inject when graph retrieval produced actual context.
-            # This keeps baseline behavior unchanged for non-graph turns.
             injected_knowledge = result.get("text", "").strip()
             if not injected_knowledge:
                 print("GRAPHRAG_NOOP_EMPTY_CONTEXT", flush=True)
                 _clear_graphrag_context(loop_data)
                 return
 
-            # INJECT: Provide structured JSON to Agent Zero for "Top 1% Perfect" parsing
-            # Agent Zero's prompt system automatically renders anything in extras_persistent
             extras = loop_data.extras_persistent
-            
             graph_data = {
                 "source": "GraphRAG (Neo4j)",
                 "injected_knowledge": injected_knowledge,
             }
-            
             if result.get("entities"):
-                graph_data["related_entities"] = result["entities"][:30] # expanded entity capture
+                graph_data["related_entities"] = result["entities"][:30]
             
             context_text = json.dumps(graph_data, indent=2, sort_keys=True)
-            
-            # Hash round-trip for Top 1% validation
             ctx_hash = hashlib.sha256(context_text.encode("utf-8")).hexdigest()
             print(f"GRAPHRAG_CONTEXT_SHA256={ctx_hash}", flush=True)
             print("GRAPHRAG_HOOKPOINT=message_loop_prompts_after", flush=True)
-            print(f"GRAPHRAG_LOOPDATA_KEYS={sorted(list(extras.keys()))}", flush=True)
 
-            # Additive hybrid injection: separate GraphRAG prompt fragment key.
             extras["graphrag"] = self.agent.parse_prompt(
                 "agent.system.graphrag.md",
                 context_json=context_text,
                 context_sha256=ctx_hash,
                 context_sentinel="HYBRID_GRAPHRAG_CONTEXT_V1",
             )
-
-            # Explicit ordering: memory extras first, then graphrag, then existing extras.
             loop_data.extras_persistent = _ordered_hybrid_extras(extras)
-
-            # Mandatory marker for E2E success verification
             print("GRAPHRAG_CONTEXT_INJECTED", flush=True)
-            print(
-                f"GraphRAG injected {len(result.get('entities', []))} entities, "
-                f"latency={result.get('latency_ms', 0):.0f}ms", flush=True
-            )
         except Exception as e:
-            # SAFETY: Never crash the main agent message loop.
-            # If GraphRAG fails, we log a warning and let the agent proceed normally.
-            logger.warning(f"GraphRAG extension error (graceful no-op): {e}")
+            logger.warning(f"GraphRAG extension error: {e}")
 
-    async def memory_saved_after(self, memory_id: str, content: str, **kwargs):
+    async def _handle_memory_saved_after(self, memory_id: str, content: str, **kwargs):
         """
-        Real-time Synchronization Hook.
-        Automatically triggers graph construction after a successful memory save.
-        
-        Args:
-            memory_id: The ID assigned to the new memory (FAISS doc_id).
-            content: The text content of the memory.
+        Original memory_saved_after logic.
         """
         if not _check_graphrag():
             return
@@ -246,6 +227,7 @@ class GraphRAGExtension(Extension):
             print(f"GRAPHRAG_SYNC_SUCCESS: {memory_id}", flush=True)
         except Exception as e:
             logger.warning(f"GraphRAG real-time sync failed for {memory_id}: {e}")
+
 
 
 

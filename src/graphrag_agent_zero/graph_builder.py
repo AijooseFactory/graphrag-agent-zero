@@ -149,7 +149,7 @@ class GraphBuilder:
         try:
             with open(dlq_path, "a") as f:
                 f.write(json.dumps(entry) + "\n")
-            logger.error(f"GraphRAG: Failed payload secured in Dead Letter Queue")
+            logger.error("GraphRAG: Failed payload secured in Dead Letter Queue")
         except Exception as e:
             logger.critical(f"GraphRAG DLQ FAILURE: {e}")
 
@@ -175,7 +175,8 @@ class GraphBuilder:
         seen = {}
         for ent in entities_data:
             name = ent.get("name")
-            if not name: continue
+            if not name:
+                continue
             
             # Normalize: lowercase, strip whitespace and punctuation
             norm_name = re.sub(r'[^\w\s]', '', name.lower().strip())
@@ -259,7 +260,8 @@ class GraphBuilder:
                 for rel_data in result.get("relationships", []):
                     src = rel_data.get("source")
                     tgt = rel_data.get("target")
-                    if not src or not tgt: continue
+                    if not src or not tgt:
+                        continue
                     
                     rel_type = rel_data.get("type", "RELATED_TO").upper().replace(" ", "_")
                     if rel_type not in self.ALLOWED_RELATIONSHIPS:

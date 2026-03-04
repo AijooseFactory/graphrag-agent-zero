@@ -8,14 +8,13 @@ NO arbitrary Cypher execution - only allowlisted templates.
 import os
 import time
 import random
-import logging
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from contextlib import contextmanager
 
 from .safe_cypher import get_safe_query, validate_parameters
 from .logger import setup_logger, CorrelationContext
-from .errors import TransientError, PermanentError, CircuitOpenError
+from .errors import CircuitOpenError
 
 # Configure structured logging
 logger = setup_logger("graphrag_agent_zero.neo4j")
@@ -212,7 +211,7 @@ class Neo4jConnector:
         # 3. CIRCUIT BREAKER check
         try:
             self.circuit_breaker.check()
-        except CircuitOpenError as e:
+        except CircuitOpenError:
             logger.warning("Query rejected due to open circuit breaker", 
                            extra=ctx.get_extra(f"execute_{template_name}", fallback_mode=True))
             return None
