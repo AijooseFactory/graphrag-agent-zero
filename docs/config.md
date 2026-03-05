@@ -12,7 +12,7 @@ The extension is configured via environment variables.
 |----------|---------|-------------|
 | `NEO4J_URI` | `bolt://localhost:7687` | Connection URI |
 | `NEO4J_USER` | `neo4j` | Username |
-| `NEO4J_PASSWORD` | `graphrag2026` | Password |
+| `NEO4J_PASSWORD` | `<your-password>` | Password |
 | `NEO4J_DATABASE` | `neo4j` | Database name |
 
 ## Retrieval Settings

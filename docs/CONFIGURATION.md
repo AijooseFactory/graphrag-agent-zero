@@ -17,7 +17,7 @@ All variables should be set in your `.env` file in the Agent Zero root directory
 |----------|---------|-------------|
 | `NEO4J_URI` | `bolt://localhost:7687` | Connection string for Neo4j. |
 | `NEO4J_USER` | `neo4j` | Database username. |
-| `NEO4J_PASSWORD` | `graphrag2026` | Database password. |
+| `NEO4J_PASSWORD` | `<your-password>` | Database password. |
 | `NEO4J_DATABASE` | `neo4j` | Database name. |
 | `NEO4J_CONNECTION_TIMEOUT_MS` | `5000` | Connection attempt timeout. |
 | `NEO4J_QUERY_TIMEOUT_MS` | `10000` | Individual query timeout. |

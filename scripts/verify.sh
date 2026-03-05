@@ -64,7 +64,7 @@ check_pattern() {
 check_pattern "OpenAI API key"      "OPENAI_API_KEY=sk-[A-Za-z0-9]"
 check_pattern "Anthropic API key"   "ANTHROPIC_API_KEY=[A-Za-z0-9]"
 # Catch real passwords in comments (e.g. commented-out PASSWORD=<real_value>)
-# Safe placeholders like graphrag2026 or <your-password-here> will match but are acceptable.
+# The verify.sh script permits placeholders like <your-password-here> for CI checks.
 check_pattern "Commented password"  '#.*PASSWORD=[A-Za-z0-9@!$]{6,}'
 
 # Also check git staged files (if in a git repo)
