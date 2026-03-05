@@ -26,4 +26,4 @@ The extension is configured via environment variables.
 ## Usage
 Environment variables should be set in the host environment or defined in a `.env` file at the project root. 
 
-A template is provided at **[.env.example](file:///Users/george/Mac/data/usr/projects/ai_joose_factory/Projects/graphrag-agent-zero/.env.example)**. Copy this to `.env` to get started. The extension will *not* override existing environment variables.
+A template is provided at **[.env.example](.env.example)**. Copy this to `.env` to get started. The extension will *not* override existing environment variables.

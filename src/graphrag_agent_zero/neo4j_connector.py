@@ -167,7 +167,7 @@ class Neo4jConnector:
     def session(self):
         """
         Context manager for clean session handling.
-        MAINTENANCE NOTE for Mac: Use this if adding new administrative tools.
+        MAINTENANCE NOTE: Use this if adding new administrative tools.
         """
         driver = self._get_driver()
         if driver is None:

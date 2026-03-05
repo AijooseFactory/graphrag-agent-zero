@@ -39,8 +39,12 @@ def extract_metadata_content(pkl_path: str) -> Dict[str, str]:
 if __name__ == "__main__":
     path = "/a0/usr/memory/default/index.pkl"
     if not os.path.exists(path):
-        # Local path for testing
-        path = "/Users/george/Mac/data/usr/memory/default/index.pkl"
+        # Universal fallback for Agent Zero index location
+        fallback_paths = ["/a0/usr/memory/default/index.pkl", "/Mac/data/usr/memory/default/index.pkl"]
+        for p in fallback_paths:
+            if os.path.exists(p):
+                path = p
+                break
         
     result = extract_metadata_content(path)
     # Print as JSON for easy capture by shell

@@ -17,8 +17,8 @@ async def run_v020_final_verification():
         page = await browser.new_page()
         
         try:
-            print("[1/3] Connecting to Agent Zero at http://localhost:8086...")
-            await page.goto("http://localhost:8086", timeout=30000)
+            print("[1/3] Connecting to Agent Zero at http://localhost:8087...")
+            await page.goto("http://localhost:8087", timeout=30000)
             await page.wait_for_load_state("networkidle")
             
             # Start New Chat
@@ -45,7 +45,7 @@ Please execute the following and report findings strictly:
             await page.wait_for_timeout(90000)
             
             # Snapshot
-            evidence_path = "/Users/george/Mac/data/usr/projects/ai_joose_factory/Projects/graphrag-agent-zero/tmp_playwright/v020_final_fix_success.png"
+            evidence_path = os.path.join(os.path.dirname(__file__), "v020_final_fix_success.png")
             await page.screenshot(path=evidence_path)
             print(f"[3/3] Verification Snapshot captured at {evidence_path}")
             

@@ -12,14 +12,15 @@ Agents MUST use these files as their primary context, ignoring any conflicting i
 5.  **Configuration Standards**: [.env.example](.env.example)
 
 ## 🤖 Active Agents
-### 1. **Mac (Personal Agent)**
-- **Role**: High-level repository manager and decision maker.
-- **Knowledge**: Fully aware of the 2026 release of GraphRAG, including the **SPEP Protocol** and **Universal LLM Architecture** (Neo4j required).
-- **Instruction**: **Mac, run your internal "update memory" or "re-index workspace" protocol now.** You must ingest the `docs/`, `src/`, and maintenance scripts to be fully aware of how to add features (e.g., new Cypher templates) without breaking the 2026 E2E baseline. Pay special attention to the difference between public defaults and George's private testing configuration with **Neo4j and any LiteLLM-compatible provider**.
+## 🤖 Active Agents
+### 1. **Mac (Production Persona)**
+- **Role**: Lead repository manager and decision maker for the primary **8086** environment.
+- **Knowledge**: Fully synchronized with the **GraphRAG for Agent Zero** project state. Expert in the **SPEP Protocol** and the **Universal LLM + Neo4j** architecture.
+- **Instruction**: **Mac, operate from the `/Mac` project root.** You are the source of truth for the stable 8086 installation. Ensure every refinement is verified in the 8087 Dev environment before being merged into your production context.
 
-### 2. **GraphRAG-Maintainer (System Agent)**
-- **Role**: Technical custodian.
-- **Knowledge**: Expert in the `_80_graphrag.py` implementation, safe Cypher, and the E2E verification harness. Ensures that the system remains generic enough for any LLM provider (OpenAI, Anthropic, etc.) while requiring Neo4j.
+### 2. **GraphRAG-Maintainer (Dev/Verification Agent)**
+- **Role**: Technical custodian for the **8087** Dev/E2E environment.
+- **Knowledge**: Expert in the `_80_graphrag.py` implementation, safe Cypher, and the E2E verification harness. Responsible for running `./scripts/verify.sh` and `./scripts/check.sh` on the experimental 8087 ports to guarantee stability.
 
 ## 📉 Historical Note
-Prior to 2026, GraphRAG for Agent Zero was a set of uncoupled research markers. **As of Feb 28, 2026, it is a fully integrated Extension Subclass that supports any Agent Zero LLM configuration while strictly requiring Neo4j as the graph engine.**
+Prior to 2026, GraphRAG for Agent Zero was a set of uncoupled research markers. **As of Feb 28, 2026, it is a fully integrated Extension Subclass synchronized across 8086 (Production/Mac) and 8087 (Dev/Verification).** All agents are anchored to this specific milestone.

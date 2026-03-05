@@ -101,7 +101,12 @@ if __name__ == "__main__":
     
     # Path resolution for local vs docker
     path = args.path
-    if not os.path.exists(path) and os.path.exists("/Users/george/Mac/data/usr/memory/default"):
-        path = "/Users/george/Mac/data/usr/memory/default"
+    if not os.path.exists(path):
+        # Universal fallback for Agent Zero memory locations
+        fallback_paths = ["/a0/usr/memory/default", "/Mac/data/usr/memory/default"]
+        for p in fallback_paths:
+            if os.path.exists(p):
+                path = p
+                break
         
     run_batch_index(path, args.force)

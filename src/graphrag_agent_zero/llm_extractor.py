@@ -29,8 +29,17 @@ class LLMExtractor:
         try:
             path = self.settings_path
             if not os.path.exists(path):
-                # Fallback for host diagnostics
-                path = "/Users/george/Mac/data/usr/settings.json"
+                # Universal fallback logic for different Agent Zero mount layouts
+                # 1. Try relative search (if installed in extensions folder)
+                possible_paths = [
+                    os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../settings.json")),
+                    "/a0/usr/settings.json",
+                    "/Mac/data/usr/settings.json"
+                ]
+                for p in possible_paths:
+                    if os.path.exists(p):
+                        path = p
+                        break
                 
             if os.path.exists(path):
                 with open(path, "r") as f:
