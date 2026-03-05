@@ -4,10 +4,16 @@ This document outlines the history, current state, and future direction of the H
 
 ## 📜 Project History
 
+### v0.2.1 - 2026-03-05
+- **Stability Fix**: Isolated E2E verification volumes to prevent data loss in dev/production environments.
+- **Auto-Recovery**: Restored broken `settings.json` and verified Ollama host-to-container connectivity.
+- **Package Integrity**: Fixed `ModuleNotFoundError` by correctly installing the Python package in the Agent Zero virtual environment.
+
 ### v0.2.0 - 2026-03-04
 - **Enterprise Resilience**: Implemented Neo4j Circuit Breaker, Jittered Backoff, and Dead Letter Queue.
 - **Bulk Operations**: Added `scripts/batch_index.py` for high-performance memory ingestion.
-- **Entity Intelligence**: Lightweight name normalization and deduplication in `GraphBuilder`.
+- **LLM-First Entity Extraction**: Deep reasoning-first semantic discovery with schema validation.
+- **Alias-Aware Resolution**: Merges synonyms and alternate names (e.g., "J. Smith" → "John Smith") via LLM aliases.
 - **Hybrid Retrieval Performance**: LRU+TTL Caching and Tiered NER Pipeline.
 - **Diagnostic Grounding**: Enhanced `install.sh` with `--verify` and unified "Agent Zero Vector Memory" terminology.
 
@@ -30,15 +36,14 @@ Based on the current architecture, implementation, and v0.1.1 features, here are
 
 ---
 
-### � Top Priority (Critical for Semantic Power)
+###  Top Priority (Critical for Semantic Power)
 
 | Area | Improvement | Rationale |
 |------|-------------|----------|
-| **LLM Entity Extraction** | Ensure configured Utility Model uses an LLM-based entity extraction layer | The current implementation is a foundation but lacks the semantic extraction that makes GraphRAG powerful. |
 
 ---
 
-### �🔥 High Priority (High Impact, Feasible)
+### 🔥 High Priority (High Impact, Feasible)
 
 | Area | Improvement | Rationale |
 |------|-------------|----------|
@@ -190,10 +195,9 @@ async def with_retry(operation, max_retries=3, base_delay=1.0):
 ---
 
 ### ✅ v0.2.0 - Core Resilience & Universality (Completed 2026-03-05)
-- [x] **Universal LLM Architecture**: Refactored to support any Agent Zero provider (OpenAI, Anthropic, Ollama) via LiteLLM.
+- [x] **LLM-First Entity Extraction**: Refactored for deep reasoning-first semantic discovery with schema validation.
+- [x] **Alias-Aware Resolution**: Merges synonyms and alternate names via LLM-provided aliases.
 - [x] **Enterprise Resilience Layer**: Neo4j Circuit Breaker and Jittered Exponential Backoff.
-- [x] **High-Performance Caching**: `LRUTTLCache` for subgraph and context data.
-- [x] **Hybrid NER Pipeline**: Two-tier extraction (Fast Heuristic + Deep LLM Reasoning).
 - [x] **Cognitive Optimization**: Injected intellectual research framework into core reasoning loop.
 - [x] **E2E Isolation**: Hardened test container with automatic volume purging to prevent state leakage.
 

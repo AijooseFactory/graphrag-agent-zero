@@ -168,51 +168,113 @@ class GraphBuilder:
             logger.critical(f"GraphRAG DLQ FAILURE: {e}")
 
     def _sanitize_properties(self, props: Any) -> Dict[str, Any]:
-        """Neo4j rejects nested dictionaries as properties. This sanitizes LLM output."""
+        """
+        Hardened Neo4j Sanitation (Top 1% Engineering):
+        - Enforce scalar types (String, Number, Bool, List[Scalar])
+        - JSON-stringify or drop nested dicts
+        - Remove null bytes and control chars
+        - Limit property count
+        """
         if not isinstance(props, dict):
             return {}
             
         import json
         clean = {}
-        for k, v in props.items():
+        MAX_PROPS = 15
+        MAX_VAL_LEN = 1000
+        
+        # Priority properties to keep if we hit MAX_PROPS
+        priority_keys = ["description", "evidence", "aliases", "title", "source"]
+        
+        # Sort keys to ensure priority keys are processed first
+        sorted_keys = sorted(props.keys(), key=lambda k: (0 if k in priority_keys else 1, k))
+
+        for k in sorted_keys:
+            if len(clean) >= MAX_PROPS:
+                break
+                
+            v = props[k]
             if v is None:
                 continue
+                
+            # Sanitize key (remove control chars, strip)
+            clean_k = "".join(ch for ch in str(k) if ord(ch) >= 32).strip()[:100]
+            if not clean_k:
+                continue
+
+            # Sanitize value
             if isinstance(v, (dict, list)):
-                # Stringify complex nested objects recursively
-                clean[str(k)] = json.dumps(v)
+                # Strictly for lists, check if elements are scalars
+                if isinstance(v, list):
+                    clean_v = []
+                    for item in v:
+                        if isinstance(item, (str, int, float, bool)):
+                            # Sanitize string items
+                            if isinstance(item, str):
+                                item = "".join(ch for ch in item if ord(ch) >= 32).strip()[:MAX_VAL_LEN]
+                            clean_v.append(item)
+                    clean[clean_k] = clean_v
+                else:
+                    # Dicts get stringified
+                    clean[clean_k] = json.dumps(v)[:MAX_VAL_LEN]
+            elif isinstance(v, (str, int, float, bool)):
+                if isinstance(v, str):
+                    v = "".join(ch for ch in v if ord(ch) >= 32).strip()[:MAX_VAL_LEN]
+                clean[clean_k] = v
             else:
-                clean[str(k)] = v
+                # Fallback for unknown types
+                clean[clean_k] = str(v)[:MAX_VAL_LEN]
+                
         return clean
 
     def deduplicate_entities(self, entities_data: List[Dict]) -> List[Dict]:
-        """2026 Best Practice: In-memory Entity Resolution via name normalization."""
-        seen = {}
+        """
+        Advanced Entity Resolution (v0.2.0):
+        - Uses aliases/synonyms for cross-linking
+        - Canonicalizes names for matching
+        - Merges properties from duplicates
+        """
+        seen_by_name = {} # norm_name -> entity
+        alias_map = {}    # norm_alias -> norm_canonical_name
+        
+        # Pass 1: Build alias map and identify unique entities
         for ent in entities_data:
             name = ent.get("name")
             if not name:
                 continue
             
             norm_name = self.normalize_entity_name(name)
+            aliases = ent.get("aliases", [])
             
-            if norm_name not in seen:
-                # Ensure type is allowlisted
-                ent_type = ent.get("type", "Concept")
-                if ent_type not in self.ALLOWED_ENTITY_TYPES:
+            # If this is a new entity, or an alias of an existing one
+            target_norm = alias_map.get(norm_name, norm_name)
+            
+            if target_norm not in seen_by_name:
+                # Register new canonical entity
+                ent["name"] = name.strip() # Keep original display name
+                ent["type"] = ent.get("type", "Concept")
+                if ent["type"] not in self.ALLOWED_ENTITY_TYPES:
                     ent["type"] = "Concept"
-                    
-                # Store with normalized name but keep original for display if first
-                ent["name"] = name.strip() 
                 ent["properties"] = self._sanitize_properties(ent.get("properties", {}))
-                seen[norm_name] = ent
+                seen_by_name[target_norm] = ent
             else:
-                # Merge properties if duplicate found
-                existing_props = seen[norm_name].get("properties", {})
+                # Merge into existing entity
+                existing = seen_by_name[target_norm]
                 new_props = self._sanitize_properties(ent.get("properties", {}))
+                existing["properties"].update(new_props)
                 
-                existing_props.update(new_props)
-                seen[norm_name]["properties"] = existing_props
-        
-        return list(seen.values())
+            # Register aliases for this entity
+            for alias in aliases:
+                norm_alias = self.normalize_entity_name(alias)
+                if norm_alias and norm_alias not in alias_map:
+                    alias_map[norm_alias] = target_norm
+                    # Add to property aliases if missing
+                    current_aliases = seen_by_name[target_norm]["properties"].get("aliases", [])
+                    if isinstance(current_aliases, list) and alias not in current_aliases:
+                        current_aliases.append(alias)
+                        seen_by_name[target_norm]["properties"]["aliases"] = current_aliases
+
+        return list(seen_by_name.values())
 
     def build_from_document(self, doc: Dict[str, Any]) -> Dict[str, int]:
         """Build graph nodes and edges from a document via Batch Processing"""

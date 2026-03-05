@@ -64,7 +64,7 @@ class GraphRAGSyncExtension(Extension):
             }
             success = builder.build_from_document(doc)
             if success:
-                logger.debug(f"GraphRAG: indexed memory {doc_id} into Neo4j")
+                logger.info(f"GraphRAG: indexed memory {doc_id} into Neo4j")
         except Exception as e:
             # Never crash the agent — log and move on
             logger.warning(f"GraphRAG sync failed for {doc_id} (non-fatal): {e}")

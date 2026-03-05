@@ -1,6 +1,6 @@
 [project]
 name = "graphrag-agent-zero"
-version = "0.2.0"
+version = "0.2.1"
 description = "GraphRAG extension for Agent Zero"
 authors = [
     { name = "AijooseFactory", email = "hello@aijoose.com" }

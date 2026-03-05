@@ -1,0 +1,29 @@
+# GraphRAG for Agent Zero — ISOLATED E2E TEST STACK
+#
+# This stack is STRICTLY for ephemeral contract testing.
+# It uses private volumes to ensure zero collision with dev/prod data.
+
+name: graphrag_e2e
+
+services:
+  agent-zero-e2e:
+    build:
+      context: ../agent-zero-fork
+      dockerfile: DockerfileLocal
+      args:
+        - BUILD_GIT_SHA=${BUILD_GIT_SHA:-unknown}
+    image: agentzero/graphrag-e2e:latest
+    container_name: agent-zero-e2e
+    ports:
+      - "8088:80"
+      - "8001:8000"
+    env_file:
+      - .env
+    volumes:
+      - graphrag_e2e_usr:/a0/usr
+      - ../src:/a0/src
+      - ../scripts:/a0/usr/scripts:ro
+      - ./llm_stub:/a0/dev/llm_stub:ro
+
+volumes:
+  graphrag_e2e_usr:

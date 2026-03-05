@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-COMPOSE_FILE="dev/docker-compose.graphrag-dev.yml"
-SERVICE="agent-zero-graphrag-dev"
+COMPOSE_FILE="dev/docker-compose.e2e.yml"
+SERVICE="agent-zero-e2e"
 DEV_ENV_FILE="dev/.env"
 RUN_ID="$(date -u +"%Y%m%dT%H%M%SZ")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ART_DIR="artifacts/e2e-hybrid/${RUN_ID}"
 mkdir -p "${ART_DIR}"
 
 DEV_ENV_BACKUP="$(mktemp "/tmp/graphrag-dev-env.${RUN_ID}.XXXXXX")"
 DEV_ENV_HAD_FILE="false"
-SETTINGS_BACKUP="$(mktemp "/tmp/graphrag-settings.${RUN_ID}.XXXXXX")"
-SETTINGS_BACKED_UP="false"
+# Settings backup/restore removed in favor of total volume isolation.
+# E2E now uses a dedicated 'graphrag_e2e' project and volumes.
 
 MEMORY_SENTINEL_ID="HYBRID_MEMORY_SENTINEL=${RUN_ID}"
 SHARED_TOKEN="HYBRID_SHARED_TOKEN_${RUN_ID}"
@@ -34,37 +36,10 @@ container_running() {
   docker ps --format '{{.Names}}' | grep -Fxq "${SERVICE}"
 }
 
-backup_settings() {
-  if container_running && docker cp "${SERVICE}:/a0/usr/settings.json" "${SETTINGS_BACKUP}" >/dev/null 2>&1; then
-    SETTINGS_BACKED_UP="true"
-    echo "Backed up /a0/usr/settings.json"
-    return 0
-  fi
-  echo "WARNING: could not backup /a0/usr/settings.json (container may not be running yet)"
-}
-
-restore_settings() {
-  if [ "${SETTINGS_BACKED_UP}" != "true" ]; then
-    rm -f "${SETTINGS_BACKUP}"
-    return 0
-  fi
-  if ! container_running; then
-    echo "WARNING: ${SERVICE} is not running; skipping settings restore"
-    rm -f "${SETTINGS_BACKUP}"
-    return 0
-  fi
-  docker cp "${SETTINGS_BACKUP}" "${SERVICE}:/a0/usr/settings.json" >/dev/null 2>&1 || true
-  docker compose -f "${COMPOSE_FILE}" exec -T "${SERVICE}" bash -lc \
-    "supervisorctl restart run_ui >/dev/null 2>&1 || true" || true
-  rm -f "${SETTINGS_BACKUP}"
-  echo "Restored /a0/usr/settings.json"
-}
-
 cleanup() {
   restore_dev_env
-  restore_settings
-  # ENSURE we never leak the test stubs into the user's 8087 browser session
-  docker compose -f "${COMPOSE_FILE}" down -v >/dev/null 2>&1 || true
+  # Isolated E2E project ONLY is destroyed.
+  docker compose -p graphrag_e2e -f "${COMPOSE_FILE}" down -v >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -155,8 +130,8 @@ NEO4J_QUERY_TIMEOUT_MS=5000
 GRAPH_EXPAND_MAX_HOPS=2
 GRAPH_EXPAND_LIMIT=100
 GRAPH_MAX_RESULTS=${GRAPH_MAX_RESULTS:-50}
-GRAPHRAG_UTILITY_PROMPT_ENABLED=true
-GRAPHRAG_UTILITY_PROMPT_MODE=append
+GRAPHRAG_UTILITY_PROMPT_ENABLED=false
+GRAPHRAG_EXTRACTION_MODE=heuristic
 EOF_ENV
 }
 
@@ -164,13 +139,20 @@ recreate() {
   docker compose -f "${COMPOSE_FILE}" down --remove-orphans
   docker compose -f "${COMPOSE_FILE}" up -d --force-recreate "${SERVICE}"
   # Re-deploy latest extension hooks from installer_files into the container volume
-  local ext_src
-  ext_src="$(cd "$(dirname "$0")/.." && pwd)/installer_files"
-  docker cp "${ext_src}/_80_graphrag.py" "${SERVICE}:/a0/usr/extensions/message_loop_prompts_after/"
-  docker cp "${ext_src}/_80_graphrag_sync.py" "${SERVICE}:/a0/usr/extensions/memory_saved_after/"
-  docker cp "${ext_src}/_80_graphrag_delete.py" "${SERVICE}:/a0/usr/extensions/memory_deleted_after/"
-  docker cp "${ext_src}/_80_graphrag_patch.py" "${SERVICE}:/a0/usr/extensions/agent_init/"
-  docker cp "${ext_src}/agent.system.graphrag.md" "${SERVICE}:/a0/usr/prompts/"
+  # Using tar for more robust transfer (avoids some docker cp pipe issues on Mac)
+  docker exec -i "${SERVICE}" mkdir -p \
+    /a0/usr/extensions/message_loop_prompts_after/ \
+    /a0/usr/extensions/memory_saved_after/ \
+    /a0/usr/extensions/memory_deleted_after/ \
+    /a0/usr/extensions/agent_init/ \
+    /a0/usr/prompts/
+
+  tar --no-xattrs -C "${ROOT_DIR}/installer_files" -cf - _80_graphrag.py | docker exec -i "${SERVICE}" tar -C "/a0/usr/extensions/message_loop_prompts_after/" -xf -
+  tar --no-xattrs -C "${ROOT_DIR}/installer_files" -cf - _80_graphrag_sync.py | docker exec -i "${SERVICE}" tar -C "/a0/usr/extensions/memory_saved_after/" -xf -
+  tar --no-xattrs -C "${ROOT_DIR}/installer_files" -cf - _80_graphrag_delete.py | docker exec -i "${SERVICE}" tar -C "/a0/usr/extensions/memory_deleted_after/" -xf -
+  tar --no-xattrs -C "${ROOT_DIR}/installer_files" -cf - _80_graphrag_patch.py | docker exec -i "${SERVICE}" tar -C "/a0/usr/extensions/agent_init/" -xf -
+  tar --no-xattrs -C "${ROOT_DIR}/installer_files" -cf - agent.system.graphrag.md | docker exec -i "${SERVICE}" tar -C "/a0/usr/prompts/" -xf -
+
   # Purge stale bytecode, remove rogue .env override, reinstall package, and restart
   docker compose -f "${COMPOSE_FILE}" exec -T "${SERVICE}" bash -c \
     "rm -f /a0/usr/.env; \
@@ -182,10 +164,13 @@ recreate() {
 force_stub_settings() {
   docker compose -f "${COMPOSE_FILE}" exec -T "${SERVICE}" bash -lc \
     "python3 - <<'PY'
-import json
+import json, os
 path = '/a0/usr/settings.json'
-with open(path, 'r', encoding='utf-8') as f:
-    s = json.load(f)
+if os.path.exists(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        s = json.load(f)
+else:
+    s = {}
 
 s['chat_model_provider'] = 'openai'
 s['chat_model_name'] = 'openai/gpt-4o-mini-stub'
@@ -291,7 +276,7 @@ PY" | tee "${ART_DIR}/graph_seed.txt" | grep -q "GRAPH_SEEDED"
 
 probe_prompt() {
   local prompt="$1"
-  node scripts/hybrid_prompt_probe.mjs --url "http://localhost:8087" --prompt "${prompt}" --timeout-ms 150000
+  node scripts/hybrid_prompt_probe.mjs --url "http://localhost:8088" --prompt "${prompt}" --timeout-ms 150000
 }
 
 assert_contains() {
@@ -353,10 +338,10 @@ run_case() {
   echo "=== Running case: ${case_name} ==="
   write_env "${enabled}" "${neo4j_uri}" "${neo4j_user}" "${neo4j_password}" "${neo4j_database}"
   recreate
-  wait_http_200 "http://localhost:8087/health"
-  wait_http_200 "http://localhost:8000/v1/models"
+  wait_http_200 "http://localhost:8088/health"
+  wait_http_200 "http://localhost:8001/v1/models"
   force_stub_settings
-  wait_http_200 "http://localhost:8087/health"
+  wait_http_200 "http://localhost:8088/health"
 
   # ── Evidence: mount grounding Check (B2 Ground Truth) ──
   docker compose -f "${COMPOSE_FILE}" exec -T "${SERVICE}" bash -lc "source /opt/venv-a0/bin/activate && python3 /a0/usr/scripts/verify_memory.py" > "${ART_DIR}/${case_name}.grounding.txt" 2>&1 || true
@@ -426,7 +411,7 @@ run_case() {
   echo "PASS: ${case_name}"
 }
 
-backup_settings
+# No backup needed anymore due to isolation
 
 if [ ! -d node_modules ]; then
   npm install

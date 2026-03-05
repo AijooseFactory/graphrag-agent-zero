@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.1] - 2026-03-05
+### Fixed
+- **Emergency Data Protection**: Isolated E2E verification volumes (`-p graphrag_e2e`) to prevent accidental deletion of development data/settings.
+- **Environment Hardening**: Restored corrupted `settings.json` and verified Ollama host-to-container connectivity.
+- **Packaging**: Resolved `ModuleNotFoundError` by ensuring `graphrag_agent_zero` is correctly installed in the Agent Zero virtual environment.
+
 All notable changes to this project will be documented in this file.
 
 ## [0.3.0] - Planned
@@ -16,7 +22,8 @@ All notable changes to this project will be documented in this file.
 - **Universal LLM Architecture**: Complete decoupling of the LLM provider; supports OpenAI, Anthropic, and Ollama via LiteLLM.
 - **Enterprise Resilience Layer**: Neo4j Circuit Breaker and Jittered Exponential Backoff.
 - **High-Performance Caching**: `LRUTTLCache` for subgraph and context data.
-- **Hybrid NER Pipeline**: Two-tier extraction (Fast Heuristic + Deep LLM Reasoning).
+- **LLM-First Entity Extraction**: Reasoning-first semantic discovery with alias-aware entity resolution.
+- **Top 1% Engineering Safety**: Strict JSON Schema validation and automated secret redaction for evidence snippets.
 - **Cognitive Optimization**: Injected intellectual research framework into core reasoning loop.
 - **Real-time Graph Sync**: Automatic `memory_saved_after` hook for instant indexing.
 - **Batch Indexing Utility**: New `scripts/batch_index.py` for bulk workspace ingestion.

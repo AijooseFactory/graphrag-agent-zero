@@ -20,9 +20,25 @@ class LLMExtractor:
     
     def __init__(self, settings_path: str = "/a0/usr/settings.json"):
         self.settings_path = settings_path
-        self.model_name = None
-        self.provider = None
+        self.config = {} 
         self._load_settings()
+
+    @property
+    def provider(self) -> str:
+        """Get provider (e.g., 'openai', 'anthropic', 'ollama')"""
+        p = self.config.get("util_model_provider", "openai")
+        return p.split("/")[0] if "/" in p else p
+
+    @property
+    def model_name(self) -> str:
+        """Get model name (e.g., 'gpt-4o-mini', 'llama3')"""
+        model = self.config.get("util_model_name", "gpt-4o-mini")
+        # Safety: if model includes a provider prefix that matches our provider, strip it
+        # This prevents litellm from doubling up prefixes (e.g., openai/openai/gpt)
+        prov = self.provider
+        if model.startswith(f"{prov}/"):
+            return model[len(prov)+1:]
+        return model
         
     def _load_settings(self):
         """Load model settings from Agent Zero configuration"""
@@ -30,7 +46,6 @@ class LLMExtractor:
             path = self.settings_path
             if not os.path.exists(path):
                 # Universal fallback logic for different Agent Zero mount layouts
-                # 1. Try relative search (if installed in extensions folder)
                 possible_paths = [
                     os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../settings.json")),
                     "/a0/usr/settings.json",
@@ -43,13 +58,11 @@ class LLMExtractor:
                 
             if os.path.exists(path):
                 with open(path, "r") as f:
-                    settings = json.load(f)
-                    self.model_name = settings.get("util_model_name")
-                    self.provider = settings.get("util_model_provider")
+                    self.config = json.load(f)
                     
                     # litellm config
-                    if "litellm_global_kwargs" in settings:
-                        api_base = settings["litellm_global_kwargs"].get("base_url")
+                    if "litellm_global_kwargs" in self.config:
+                        api_base = self.config["litellm_global_kwargs"].get("base_url")
                         if api_base:
                             # Fix for running on host: replace host.docker.internal with localhost
                             if "host.docker.internal" in api_base and not os.path.exists("/.dockerenv"):
@@ -125,79 +138,127 @@ class LLMExtractor:
         except Exception as e:
             logger.error(f"GraphRAG DLQ FAILURE: {e}")
 
+    def _get_config(self, key: str, default: Any) -> Any:
+        """Get config from environment or fallback to default"""
+        return os.environ.get(key, default)
+
+    def _redact_secrets(self, text: str) -> str:
+        """Basic redaction for potential secrets in evidence snippets"""
+        import re
+        # Case-insensitive redaction for common secret-carrying patterns
+        # 1. Assignments: key="secret", pass: 12345, password is admin123, etc.
+        # We catch the 'is' or '=' or ':' followed by a potential secret.
+        assignment_pattern = r'(?i)(?:key|pass(?:word)?|pw|secret|token|auth)\s*(?:[:=]|\bis\b)\s*["\']?([a-zA-Z0-9_\-!@#$%^&*]{4,})["\']?'
+        # 2. Long identifiers: 32+ char hex/base64-like strings
+        long_id_pattern = r'\b[a-zA-Z0-9_\-]{32,}\b'
+        
+        redacted = text
+        
+        # Redact assignments
+        def redact_assignment(m):
+            # If we have a captured group, redact it in the full match
+            if m.group(1):
+                return m.group(0).replace(m.group(1), "[REDACTED]")
+            return "[REDACTED]"
+
+        redacted = re.sub(assignment_pattern, redact_assignment, redacted)
+        
+        # Redact long standalone tokens
+        redacted = re.sub(long_id_pattern, "[REDACTED]", redacted)
+        
+        return redacted
+
+    def _validate_extraction_schema(self, data: Any) -> bool:
+        """Validate the extraction payload against required schema"""
+        if not isinstance(data, dict):
+            return False
+        if "entities" not in data or not isinstance(data["entities"], list):
+            return False
+        if "relationships" not in data or not isinstance(data["relationships"], list):
+            return False
+        
+        # Check entity structure
+        for ent in data["entities"]:
+            if not isinstance(ent, dict) or "name" not in ent or "type" not in ent:
+                return False
+        
+        # Check relationship structure
+        for rel in data["relationships"]:
+            if not isinstance(rel, dict) or "source" not in rel or "target" not in rel:
+                return False
+        
+        return True
+
     def extract(self, text: str) -> Dict[str, Any]:
         """
-        Extract entities and relationships using the tiered Hybrid NER Pipeline.
+        Extract entities and relationships using the LLM-First Semantic Pipeline.
         """
-        # Tier 1: Fast NER Pass
+        mode = self._get_config("GRAPHRAG_EXTRACTION_MODE", "llm_first")
+        max_entities = int(self._get_config("GRAPHRAG_MAX_ENTITIES", 20))
+        max_rels = int(self._get_config("GRAPHRAG_MAX_RELATIONSHIPS", 30))
+        max_snippet_chars = int(self._get_config("GRAPHRAG_EVIDENCE_SNIPPET_MAX_CHARS", 300))
+
+        # Tier 0: Heuristic Pass (Candidate Hints only)
         baseline_entities = self._fast_ner_extraction(text)
-        baseline_json = json.dumps(baseline_entities, indent=2) if baseline_entities else "[]"
+        hints_json = json.dumps(baseline_entities[:10], indent=2) if baseline_entities else "[]"
         
-        # Tier 2: Deep LLM Relationship Extraction
+        if mode == "heuristic":
+            return {"entities": baseline_entities, "relationships": []}
+
+        # Tier 1: Deep LLM Semantic Sweep
         prompt = f"""
 ### TASK
-Extract all significant entities and their relationships from the text below for a knowledge graph.
+Perform a deep semantic sweep to extract significant entities and their relationships. 
+First, THINK and reason about the text interactions. Identify implicit concepts, decisions, and evolving states.
 
-### FAST NER BASELINE
-A fast heuristic pass has already identified these baseline entities. You MUST include them in your final output array, but your primary job is to find the complex RELATIONSHIPS between them (and any other entities you discover).
-{baseline_json}
+### CANDIDATE HINTS (Heuristic)
+{hints_json}
 
 ### GUIDELINES
-1. **Think and Reason**: First, analyze the text to identify how the entities interact. 
-2. **Entity Types**: Categorize entities into these standard types: Person, Team, System, Component, Concept, Event, Decision, Incident, Change, or Document.
-3. **Relationship Types**: Use meaningful relationship types such as REFERENCES, CONTAINS, MENTIONS, DEPENDS_ON, RELATED_TO, AUTHORED_BY, AFFECTS, MANAGED_BY, or WORKS_ON.
+1. **Discover & Link**: Find entities beyond the hints. Focus on semantic depth.
+2. **Standard Types**: Person, Team, System, Component, Concept, Event, Decision, Incident, Change, Document.
+3. **Evidence**: For each entity/relationship, provide a concise 'evidence' snippet (max 300 chars) from the text.
+4. **Safety**: Do not extract secrets, keys, or private identifiers.
 
 ### TEXT TO ANALYZE
 {text}
 
 ### OUTPUT FORMAT
-Provide your reasoning first, then return a valid JSON object demarcated with ```json ... ``` blocks.
-
-Structure:
+Return a valid JSON object within ```json ... ``` blocks.
 {{
   "entities": [
-    {{ "name": "Entity Name", "type": "Type", "properties": {{ "description": "..." }} }}
+    {{ 
+      "name": "Entity Name", 
+      "type": "Type", 
+      "properties": {{ "description": "...", "evidence": "..." }},
+      "aliases": ["synonym1", "synonym2"] 
+    }}
   ],
   "relationships": [
-    {{ "source": "Source Name", "target": "Target Name", "type": "TYPE", "properties": {{}} }}
+    {{ 
+      "source": "Source Name", 
+      "target": "Target Name", 
+      "type": "TYPE", 
+      "properties": {{ "evidence": "..." }} 
+    }}
   ]
 }}
 """
         content = ""
         try:
             model_id = f"{self.provider}/{self.model_name}" if self.provider != "openai" else self.model_name
-            
-            # Tier 2: Deep LLM Relationship Extraction
-            messages = []
+            messages = [{"role": "user", "content": prompt}]
             if self.system_optimization:
-                messages.append({"role": "system", "content": self.system_optimization})
+                messages.insert(0, {"role": "system", "content": self.system_optimization})
             
-            messages.append({"role": "user", "content": prompt})
-            
-            # Call litellm with a long timeout for reasoning models
-            response = litellm.completion(
-                model=model_id,
-                messages=messages,
-                timeout=180
-            )
-            
+            response = litellm.completion(model=model_id, messages=messages, timeout=180)
             content = response.choices[0].message.content
 
-            
             # MULTI-STAGE PARSER
             json_content = None
-            
-            # 1. Try to extract from markdown blocks
             if "```json" in content:
                 json_content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                # Find the last block if multiple exist
-                blocks = content.split("```")
-                if len(blocks) >= 3:
-                    json_content = blocks[-2].strip()
-            
-            # 2. If no blocks, try to find the first '{' and last '}'
-            if not json_content:
+            else:
                 import re
                 match = re.search(r'(\{.*\})', content, re.DOTALL)
                 if match:
@@ -206,21 +267,32 @@ Structure:
             if not json_content:
                 json_content = content.strip()
 
-            # 3. Final Parse
-            try:
-                data = json.loads(json_content)
-                # Success - return early
-                return data
-            except json.JSONDecodeError:
-                # Clean up potential trailing commas or other common issues
-                # Very basic cleanup for trailing commas in arrays/objects
-                import re
-                cleaned = re.sub(r',\s*([\]}])', r'\1', json_content)
-                parsed = json.loads(cleaned)
-                return parsed
+            # Final Parse & Safety Bounds
+            data = json.loads(json_content)
+            
+            if not self._validate_extraction_schema(data):
+                raise ValueError("LLM output failed schema validation")
+
+            # Apply Bounds & Redaction
+            data["entities"] = data["entities"][:max_entities]
+            data["relationships"] = data["relationships"][:max_rels]
+
+            for ent in data["entities"]:
+                props = ent.get("properties", {})
+                snippet = props.get("evidence", "")
+                props["evidence"] = self._redact_secrets(str(snippet)[:max_snippet_chars])
+                ent["properties"] = props
+                
+            for rel in data["relationships"]:
+                props = rel.get("properties", {})
+                snippet = props.get("evidence", "")
+                props["evidence"] = self._redact_secrets(str(snippet)[:max_snippet_chars])
+                rel["properties"] = props
+
+            return data
 
         except Exception as e:
-            logger.error(f"GraphRAG: LLM extraction failed: {e}")
+            logger.error(f"GraphRAG: LLM extraction failed ({e}). Falling back to heuristics.")
             if content:
                 self._write_to_dlq(content, str(e))
-            return {"entities": [], "relationships": []}
+            return {"entities": baseline_entities, "relationships": []}
