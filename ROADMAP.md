@@ -36,23 +36,6 @@ Based on the current architecture, implementation, and v0.1.1 features, here are
 |------|-------------|----------|
 | **Hybrid Research Brain** | Sets a "Google Gemini 3+" Research Prompt as the recursive Utility Model brain for autonomous cross-domain synthesis. |
 | **LLM Entity Extraction** | Ensure configured Utility Model uses an LLM-based entity extraction layer | The current implementation is a foundation but lacks the semantic extraction that makes GraphRAG powerful. |
-| **Dynamic Greeting** | Implement a unique and natural assistant greeting that varies each time | Tailored for each user; makes the AI feel more agentic and human-like. |
-
----
-
-### 🎨 Dynamic Greeting Extension Implementation Plan
-
-Implement a unique and natural assistant greeting that varies each time while maintaining the core purpose of introducing Agent Zero and offering help, specifically tailored for each user.
-
-#### ⚠️ User Review Required
-**IMPORTANT**: This change uses the LLM (Utility Model) at startup to generate the greeting. This will consume a small number of tokens each time a new session starts.
-
-#### 🛠️ Proposed Changes
-*   **[usr/prompts]**: `dynamic_greeting_gen.md` - Prompt template for warm, human-like greeting.
-*   **[usr/extensions]**: `agent_init/_10_initial_message.py` - Extension to override default greeting, calling the utility model.
-
-#### 🧪 Verification Plan
-*   **Manual**: Start new sessions, verify warmth, mention of "user", and natural variation.
 
 ---
 
