@@ -29,3 +29,56 @@ All variables should be set in your `.env` file in the Agent Zero root directory
 | `GRAPH_EXPAND_MAX_HOPS` | `2` | Max graph traversal depth from seed entities. |
 | `GRAPH_EXPAND_LIMIT` | `100` | Max entities returned per expansion query. |
 | `GRAPH_MAX_RESULTS` | `50` | Max total results returned to the prompt. |
+
+## Technical Architecture
+
+The system uses a flexible LLM provider layer while requiring Neo4j for high-performance graph traversal.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    AGENT ZERO                                │
+│                (Primary Controller)                          │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│              HYBRID GraphRAG SYSTEM                          │
+│        (Advanced Retrieval & Context Layer)                 │
+├─────────────────────────┬───────────────────────────────────┤
+│        Neo4j            │        LLM Provider               │
+│   (Required Engine)     │    (Universal Compatibility)      │
+│   - Graph Storage       │    - Entity Extraction            │
+│   - Topology Queries    │    - LiteLLM Integration          │
+└─────────────────────────┴───────────────────────────────────┘
+```
+
+## LLM Provider Configuration
+
+The Hybrid GraphRAG extension utilizes the **Utility Model** configured in your Agent Zero `settings.json`. It supports any provider compatible with LiteLLM.
+
+### Example: OpenAI
+In your `settings.json`:
+```json
+{
+  "util_model_name": "gpt-4-turbo",
+  "util_model_provider": "openai"
+}
+```
+
+### Example: Anthropic
+In your `settings.json`:
+```json
+{
+  "util_model_name": "claude-3-opus-20240229",
+  "util_model_provider": "anthropic"
+}
+```
+
+### Example: Ollama (Local)
+In your `settings.json`:
+```json
+{
+  "util_model_name": "llama3.2",
+  "util_model_provider": "ollama"
+}
+```

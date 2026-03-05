@@ -20,33 +20,32 @@ class LLMExtractor:
     
     def __init__(self, settings_path: str = "/a0/usr/settings.json"):
         self.settings_path = settings_path
-        self.model_name = "llama3.2" # Default fallback
-        self.provider = "ollama"
+        self.model_name = None
+        self.provider = None
         self._load_settings()
         
     def _load_settings(self):
         """Load model settings from Agent Zero configuration"""
         try:
-            # In Docker, the path is /a0/usr/settings.json
-            # On host (for diagnostics), it might be different
             path = self.settings_path
             if not os.path.exists(path):
-                # Try relative to Mac root if on host
+                # Fallback for host diagnostics
                 path = "/Users/george/Mac/data/usr/settings.json"
                 
             if os.path.exists(path):
                 with open(path, "r") as f:
                     settings = json.load(f)
-                    self.model_name = settings.get("util_model_name", self.model_name)
-                    self.provider = settings.get("util_model_provider", self.provider)
+                    self.model_name = settings.get("util_model_name")
+                    self.provider = settings.get("util_model_provider")
                     
                     # litellm config
                     if "litellm_global_kwargs" in settings:
-                        api_base = settings["litellm_global_kwargs"].get("base_url", litellm.api_base)
-                        # Fix for running on host: replace host.docker.internal with localhost
-                        if api_base and "host.docker.internal" in api_base and not os.path.exists("/.dockerenv"):
-                            api_base = api_base.replace("host.docker.internal", "localhost")
-                        litellm.api_base = api_base
+                        api_base = settings["litellm_global_kwargs"].get("base_url")
+                        if api_base:
+                            # Fix for running on host: replace host.docker.internal with localhost
+                            if "host.docker.internal" in api_base and not os.path.exists("/.dockerenv"):
+                                api_base = api_base.replace("host.docker.internal", "localhost")
+                            litellm.api_base = api_base
             
             # Load the Cognitive Optimization prompt
             prompt_path = os.path.join(os.path.dirname(__file__), "prompts", "cognitive_optimization.md")
@@ -56,7 +55,10 @@ class LLMExtractor:
                     self.system_optimization = f.read()
                     logger.info("GraphRAG: Utility Model optimized with Cognitive Optimization prompt")
             
-            logger.info(f"GraphRAG: Using Utility Model {self.model_name} via {self.provider}")
+            if self.model_name:
+                logger.info(f"GraphRAG: Using Utility Model {self.model_name} via {self.provider or 'default'}")
+            else:
+                logger.warning("GraphRAG: No Utility Model configured in settings.json. Extraction may fail.")
         except Exception as e:
             logger.warning(f"GraphRAG: Failed to load settings for LLMExtractor: {e}")
 
