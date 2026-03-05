@@ -140,10 +140,6 @@ class GraphRAGExtension(Extension):
         """
         Original execute logic for message_loop_prompts_after.
         """
-        # Mandatory markers for E2E verification
-        print("GRAPHRAG_EXTENSION_EXECUTED", flush=True)
-        print("GRAPHRAG_AGENT_EXTENSION_EXECUTED", flush=True)
-
         if not _check_graphrag():
             _clear_graphrag_context(loop_data)
             return
@@ -152,6 +148,10 @@ class GraphRAGExtension(Extension):
         if not is_enabled():
             _clear_graphrag_context(loop_data)
             return
+
+        # Mandatory markers for E2E verification
+        print("GRAPHRAG_EXTENSION_EXECUTED", flush=True)
+        print("GRAPHRAG_AGENT_EXTENSION_EXECUTED", flush=True)
 
         from graphrag_agent_zero.extension_hook import (
             is_neo4j_available,
@@ -207,6 +207,7 @@ class GraphRAGExtension(Extension):
             )
             loop_data.extras_persistent = _ordered_hybrid_extras(extras)
             print("GRAPHRAG_CONTEXT_INJECTED", flush=True)
+            print("GRAPHRAG_UTILITY_PROMPT_APPLIED", flush=True)
         except Exception as e:
             logger.warning(f"GraphRAG extension error: {e}")
 

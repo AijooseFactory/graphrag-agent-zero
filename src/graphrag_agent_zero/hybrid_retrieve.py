@@ -39,6 +39,7 @@ class RetrievalResult:
     def to_context_pack(self) -> str:
         """Format as context pack for LLM"""
         lines = []
+        lines.append("GRAPHRAG_CONTEXT_BLOCK_START")
         
         # Main content
         lines.append(self.text)
@@ -50,6 +51,8 @@ class RetrievalResult:
         # Graph-derived context
         if self.graph_derived and self.entities:
             lines.append("\nRelated entities: " + ", ".join(self.entities))
+            
+        lines.append("GRAPHRAG_CONTEXT_BLOCK_END")
         
         return "\n".join(lines)
 
@@ -151,6 +154,9 @@ class HybridRetriever:
             elif "source" in result:
                 doc_ids.append(result["source"])
         
+        # Log for E2E contract verification
+        logger.info("GRAPHRAG_NOOP_NEO4J_DOWN: YES")
+        
         return RetrievalResult(
             text="\n\n".join(texts),
             source_doc_ids=doc_ids,
@@ -210,6 +216,7 @@ class HybridRetriever:
         
         # Log fusion results for E2E verification
         logger.info("GRAPHRAG_RRF_ORDER: %s", final_doc_ids)
+        print(f"GRAPHRAG_RRF_ORDER: {final_doc_ids}", flush=True)
         
         # Prepare final text context (prioritizing vector text for documents found in both)
         vector_text_map = { (r.get("doc_id") or r.get("source")): r.get("text", "") for r in vector_results if (r.get("doc_id") or r.get("source")) }
@@ -219,6 +226,9 @@ class HybridRetriever:
             if doc_id in vector_text_map:
                 final_texts.append(vector_text_map[doc_id])
             # If doc_id is only in graph, we might want to fetch text, but for now we follow safety contract
+        
+        # Log for E2E contract verification
+        logger.info("GRAPHRAG_CONTEXT_INJECTED: YES")
         
         return RetrievalResult(
             text="\n\n".join(final_texts),

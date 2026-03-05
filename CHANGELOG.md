@@ -9,7 +9,10 @@ All notable changes to this project will be documented in this file.
 - **Hybrid NER Pipeline**: Two-tier extraction (Fast Heuristic + Deep LLM Reasoning).
 - **Cognitive Optimization**: Injected intellectual research framework into core reasoning loop.
 - **Real-time Graph Sync**: Automatic `memory_saved_after` hook for instant indexing.
-- **Observability Suite**: Structured JSON logging (Correlation IDs) and optional Prometheus metrics.
+- **Batch Indexing Utility**: New `scripts/batch_index.py` for bulk workspace ingestion.
+- **Entity Resolution**: Lightweight name normalization and deduplication in `GraphBuilder`.
+- **Dead Letter Queue**: Reliable failed-extraction capture at `usr/logs/failed_extractions.jsonl`.
+- **Installer v0.2.0**: Added `--verify` diagnostics and unified "Agent Zero Vector Memory" branding.
 - **Forensic Audit Certified**: Verified dual-instance synchronization (Port 8086/8087) with a "Perfect" PASS rating for cognitive detection and graph linkage.
 
 

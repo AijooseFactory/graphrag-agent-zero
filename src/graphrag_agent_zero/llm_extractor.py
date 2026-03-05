@@ -89,6 +89,31 @@ class LLMExtractor:
                 
         return entities
 
+    def _write_to_dlq(self, raw_content: str, error: str):
+        """Append failed extractions to Dead Letter Queue for human review."""
+        import datetime
+        # In Docker, path is likely /a0/usr/logs
+        log_dir = "/a0/usr/logs"
+        if not os.path.exists(log_dir):
+            # Fallback for host diagnostics
+            log_dir = os.path.join(os.path.dirname(__file__), "../../../agent-zero-fork/usr/logs")
+            
+        os.makedirs(log_dir, exist_ok=True)
+        dlq_path = os.path.join(log_dir, "failed_extractions.jsonl")
+        
+        entry = {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "model": f"{self.provider}/{self.model_name}",
+            "error": error,
+            "raw_content": raw_content
+        }
+        try:
+            with open(dlq_path, "a") as f:
+                f.write(json.dumps(entry) + "\n")
+            logger.warning(f"GraphRAG: Extraction failed, raw output secured in DLQ: {dlq_path}")
+        except Exception as e:
+            logger.error(f"GraphRAG DLQ FAILURE: {e}")
+
     def extract(self, text: str) -> Dict[str, Any]:
         """
         Extract entities and relationships using the tiered Hybrid NER Pipeline.
@@ -127,6 +152,7 @@ Structure:
   ]
 }}
 """
+        content = ""
         try:
             model_id = f"{self.provider}/{self.model_name}" if self.provider != "openai" else self.model_name
             
@@ -171,16 +197,19 @@ Structure:
 
             # 3. Final Parse
             try:
-                return json.loads(json_content)
+                data = json.loads(json_content)
+                # Success - return early
+                return data
             except json.JSONDecodeError:
                 # Clean up potential trailing commas or other common issues
-                logger.warning("GraphRAG: JSON parsing failed, attempting fallback clean-up")
                 # Very basic cleanup for trailing commas in arrays/objects
+                import re
                 cleaned = re.sub(r',\s*([\]}])', r'\1', json_content)
-                return json.loads(cleaned)
+                parsed = json.loads(cleaned)
+                return parsed
 
         except Exception as e:
             logger.error(f"GraphRAG: LLM extraction failed: {e}")
-            if 'content' in locals():
-                logger.debug(f"Raw content: {content}")
+            if content:
+                self._write_to_dlq(content, str(e))
             return {"entities": [], "relationships": []}

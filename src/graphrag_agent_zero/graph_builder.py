@@ -83,8 +83,22 @@ class GraphBuilder:
         self.extract_llm = extract_llm
         self.llm_extractor = LLMExtractor() if extract_llm else None
     
+    def normalize_entity_name(self, name: str) -> str:
+        """Standardize entity names for improved resolution."""
+        if not name:
+            return ""
+        # 1. Lowercase and strip whitespace
+        name = name.lower().strip()
+        # 2. Remove punctuation except internal underscores/hyphens
+        name = re.sub(r'(?<!\w)[^\w\s]|[^\w\s](?!\w)', '', name)
+        # 3. Collapse multiple spaces
+        name = re.sub(r'\s+', ' ', name)
+        return name
+
     def _generate_entity_id(self, name: str, entity_type: str) -> str:
         """Generate deterministic entity ID"""
+        # Resolution first
+        name = self.normalize_entity_name(name)
         key = f"{entity_type}:{name}"
         return hashlib.sha256(key.encode()).hexdigest()[:16]
     
@@ -178,8 +192,7 @@ class GraphBuilder:
             if not name:
                 continue
             
-            # Normalize: lowercase, strip whitespace and punctuation
-            norm_name = re.sub(r'[^\w\s]', '', name.lower().strip())
+            norm_name = self.normalize_entity_name(name)
             
             if norm_name not in seen:
                 # Ensure type is allowlisted
@@ -187,7 +200,8 @@ class GraphBuilder:
                 if ent_type not in self.ALLOWED_ENTITY_TYPES:
                     ent["type"] = "Concept"
                     
-                # Sanitize initial properties
+                # Store with normalized name but keep original for display if first
+                ent["name"] = name.strip() 
                 ent["properties"] = self._sanitize_properties(ent.get("properties", {}))
                 seen[norm_name] = ent
             else:

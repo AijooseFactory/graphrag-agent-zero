@@ -133,7 +133,8 @@ class Neo4jConnector:
         Uses a cached status to avoid hitting the DB on every message loop.
         """
         # Feature flag check first for reliability
-        if os.getenv("GRAPH_RAG_ENABLED", "false").lower() != "true":
+        # Check both GRAPHRAG_ENABLED (contract) and GRAPH_RAG_ENABLED (legacy)
+        if not _is_feature_enabled():
             return False
             
         # Cache health check result to avoid overhead
@@ -159,7 +160,7 @@ class Neo4jConnector:
                 return True
         except Exception as e:
             self._healthy = False
-            logger.debug(f"Neo4j health check failed: {e}")
+            logger.warning(f"Neo4j health check failed: {e}")
             return False
     
     @contextmanager
@@ -305,9 +306,22 @@ def get_connector() -> Neo4jConnector:
     return _connector
 
 
+def _is_feature_enabled() -> bool:
+    """Check if GraphRAG is enabled via feature flags.
+    
+    Mirrors extension_hook._read_feature_flag() priority:
+    1) GRAPHRAG_ENABLED (contract flag)
+    2) GRAPH_RAG_ENABLED (legacy)
+    3) false (default)
+    """
+    if "GRAPHRAG_ENABLED" in os.environ:
+        return os.getenv("GRAPHRAG_ENABLED", "false").lower() == "true"
+    return os.getenv("GRAPH_RAG_ENABLED", "false").lower() == "true"
+
+
 def is_neo4j_available() -> bool:
     """Check if Neo4j is available for use"""
     # Check feature flag first
-    if os.getenv("GRAPH_RAG_ENABLED", "false").lower() != "true":
+    if not _is_feature_enabled():
         return False
     return get_connector().is_healthy()

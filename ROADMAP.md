@@ -4,16 +4,23 @@ This document outlines the history, current state, and future direction of the H
 
 ## 📜 Project History
 
+### v0.2.0 - 2026-03-04
+- **Enterprise Resilience**: Implemented Neo4j Circuit Breaker, Jittered Backoff, and Dead Letter Queue.
+- **Bulk Operations**: Added `scripts/batch_index.py` for high-performance memory ingestion.
+- **Entity Intelligence**: Lightweight name normalization and deduplication in `GraphBuilder`.
+- **Hybrid Retrieval Performance**: LRU+TTL Caching and Tiered NER Pipeline.
+- **Diagnostic Grounding**: Enhanced `install.sh` with `--verify` and unified "Agent Zero Vector Memory" terminology.
+
 ### v0.1.1 - 2026-03-02
-- **Persistent Architecture**: Migrated all GraphRAG extensions to the persistent `usr/extensions/` volume, ensuring configurations and patches survive Docker container recreations.
-- **Dynamic Hooking**: Safely monkey-patched Agent Zero's memory directly in Python's memory runtime via `agent_init`.
-- **Neo4j Deletion Synchronization**: Added explicit hooks so that deleting memories in Agent Zero also automatically deletes the corresponding orphaned nodes in Neo4j.
-- **Robust Installation**: Bypassed Kali Linux's `externally-managed-environment` protections using the isolated virtual environment pip.
+- **Persistent Architecture**: Migrated all GraphRAG extensions to the persistent `usr/extensions/` volume.
+- **Dynamic Hooking**: Safely monkey-patched Agent Zero's memory via `agent_init`.
+- **Neo4j Deletion Synchronization**: Automatic orphan node removal in Neo4j on memory deletion.
+- **Robust Installation**: Bypassed Kali Linux environment protections.
 
 ### v0.1.0 - 2026-03-01
-- **Initial Release**: Basic hybridization retrieval combining vector semantics and graph topologies.
-- **Safe Cypher Enforcement**: Allowlisted query engine to prevent injection attacks.
-- **Zero-Trust**: Hard-capped graph traversal limits (hops, nodes).
+- **Initial Release**: Basic hybridization retrieval (SPEP protocol).
+- **Safe Cypher Enforcement**: Allowlisted query engine to prevent injection.
+- **Zero-Trust**: Traversal limits (hops, nodes).
 
 ---
 
