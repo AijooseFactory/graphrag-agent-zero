@@ -49,10 +49,11 @@ async def verify_memory(present_ids=None, deleted_ids=None):
     usr_path = os.path.join(a0_root, "usr")
     if os.path.exists(usr_path):
         is_link = os.path.islink(usr_path)
+        # PROVEN GROUND TRUTH: Check if this is a Docker mount point
         is_mount = os.path.ismount(usr_path)
         print(f"📊 Persistence Check: /usr directory found ({'Symlink' if is_link else 'Directory'})")
         if is_mount:
-            print(f"   Storage Mode: Docker Named Volume or Bind Mount (Confirmed via ismount)")
+            print(f"   Storage Mode: Docker Named Volume or Bind Mount (Confirmed via os.path.ismount)")
         else:
             print(f"   Storage Mode: Local File System (Not a mount point)")
     
