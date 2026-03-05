@@ -2,23 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.2.0] - 2026-03-04
+## [0.3.0] - Planned
+### Next-Gen Features
+- **Live Interactive Visualization**: Real-time D3/Sigma.js graphical view of the knowledge orbit.
+- **Autonomous Entity Resolution**: Background "Consolidation Loop" to merge synonyms and deduplicate the graph.
+- **Dynamic Schema Evolution**: LLM-driven discovery of new node/edge types for specialized domains.
+- **Graph-Aware Task Routing**: Intelligent executive switching between Vector and Graph retrieval.
+- **Multi-Dialect Persistence**: Native support for Memgraph and FalkorDB as alternative backends.
+- **Temporal "Self-Healing"**: Knowledge versioning and obsolescence tracking (the `WAS_FORMERLY` state).
+
+## [0.2.0] - 2026-03-05
 ### Added
+- **Universal LLM Architecture**: Complete decoupling of the LLM provider; supports OpenAI, Anthropic, and Ollama via LiteLLM.
 - **Enterprise Resilience Layer**: Neo4j Circuit Breaker and Jittered Exponential Backoff.
 - **High-Performance Caching**: `LRUTTLCache` for subgraph and context data.
 - **Hybrid NER Pipeline**: Two-tier extraction (Fast Heuristic + Deep LLM Reasoning).
 - **Cognitive Optimization**: Injected intellectual research framework into core reasoning loop.
 - **Real-time Graph Sync**: Automatic `memory_saved_after` hook for instant indexing.
 - **Batch Indexing Utility**: New `scripts/batch_index.py` for bulk workspace ingestion.
-- **Entity Resolution**: Lightweight name normalization and deduplication in `GraphBuilder`.
 - **Dead Letter Queue**: Reliable failed-extraction capture at `usr/logs/failed_extractions.jsonl`.
-- **Installer v0.2.0**: Added `--verify` diagnostics and unified "Agent Zero Vector Memory" branding.
-- **Forensic Audit Certified**: Verified dual-instance synchronization (Port 8086/8087) with a "Perfect" PASS rating for cognitive detection and graph linkage.
+- **Installer v0.2.0**: Added `--verify` diagnostics and support for universal LLM configuration.
 
-
-### Changed
-- **Hybrid Retriever**: Core SPEP protocol upgraded to utilize the new caching and resilience framework.
-- **LLM Extractor**: Refactored to support tiered extraction and optimized system prompts.
+### Fixed
+- **E2E Isolation**: Patched `scripts/e2e_hybrid_contract.sh` to physically destroy test volumes on cleanup, preventing UI state leakage.
+- **State Corruption**: Hardened environment variable management to prevent E2E test stubs from bleeding into production.
+- **Branding Scrub**: Removed all instances of internal factory branding and absolute developer paths.
 
 ## [0.1.2] - 2026-03-03
 ### Added

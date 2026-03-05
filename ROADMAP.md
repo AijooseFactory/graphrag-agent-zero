@@ -207,50 +207,47 @@ async def with_retry(operation, max_retries=3, base_delay=1.0):
 
 ---
 
-### 📋 Proposed v0.2.0 Roadmap
+### ✅ v0.2.0 - Core Resilience & Universality (Completed 2026-03-05)
+- [x] **Universal LLM Architecture**: Refactored to support any Agent Zero provider (OpenAI, Anthropic, Ollama) via LiteLLM.
+- [x] **Enterprise Resilience Layer**: Neo4j Circuit Breaker and Jittered Exponential Backoff.
+- [x] **High-Performance Caching**: `LRUTTLCache` for subgraph and context data.
+- [x] **Hybrid NER Pipeline**: Two-tier extraction (Fast Heuristic + Deep LLM Reasoning).
+- [x] **Cognitive Optimization**: Injected intellectual research framework into core reasoning loop.
+- [x] **E2E Isolation**: Hardened test container with automatic volume purging to prevent state leakage.
 
-#### 🚨 Must Fix for v0.2.0
+---
 
-**1. Install reliability hardening**
-- Eliminate common install blockers across macOS/Linux (and Docker where applicable).
-- Remove any brittle assumptions about file paths, shell features, or environment layouts.
-- Ensure install is deterministic: either succeeds and confirms success, or fails fast with a clear reason and fix steps.
+### 🚀 v0.3.0 - The Autonomous Knowledge Architect (Planned)
 
-**2. Installer improvements (`install.sh`)**
-- Detects common Agent Zero layouts automatically (venv location, repo root, agents/default path, extensions path).
-- Validates prerequisites up front (python/venv, permissions, required commands, Neo4j env vars only if enabling).
-- Produces clear, immediate messages:
-  - what was detected
-  - what was installed/copied/modified
-  - what to do next
-  - how to rollback/uninstall (if applicable)
-- Includes a built-in `--verify` mode that checks expected files/markers and prints a simple PASS/FAIL summary.
+Focus: From context retrieval to autonomous knowledge management and visualization.
 
-**3. Built-in diagnostics to prevent “GraphRAG is missing” confusion**
-- Provide a lightweight, always-available **Hybrid GraphRAG status marker** at `agent_init` (truthful and conditional).
-- Add a documented “How to verify GraphRAG is active” section that points users to log markers and the status output.
-- Ensure empty-context behavior is understandable (e.g., `GRAPHRAG_NOOP_EMPTY_CONTEXT` is expected and not treated as a broken install).
+#### 1. Live Interactive Visualization
+- **Goal**: Give the user a "God View" of their knowledge.
+- **Implementation**: Integrate a lightweight D3.js or Sigma.js visualizer into the Agent Zero UI to orbit and interact with the graph in real-time.
 
-#### Performance, Cost Control, Reliability & Observability
+#### 2. Autonomous Entity Resolution (ER)
+- **Goal**: Prevent duplicate nodes and fragmentation.
+- **Implementation**: Background "Consolidation Loop" where the Utility Model merges synonyms ("Neo4j" vs "Neo4j DB") to keep the graph densely connected.
 
-```text
-v0.2.0 - Core Focus
-├── [Must Fix] Install reliability hardening
-├── [Must Fix] Installer improvements (install.sh)
-├── [Must Fix] Built-in diagnostics & status marker
-├── Optional AI-assisted install mode (Nice-to-have)  ← NEW
-├── Caching Layer (LRU + TTL)
-├── Entity Deduplication (exact/normalized, optional fuzzy)
-├── Batch Ingestion Mode
-├── Prometheus Metrics Endpoint
-├── Hybrid NER Pipeline (tiered extraction)
-├── Memory Graph Viewer (Obsidian-style)
-├── Structured Logging (JSON + correlation IDs)
-├── Error Classification (transient/permanent/partial)
-├── Circuit Breaker for Neo4j
-├── Retry with Exponential Backoff
-└── Dead Letter Queue for failed extractions
-```
+#### 3. Dynamic Schema Evolution
+- **Goal**: Remove hardcoded type constraints.
+- **Implementation**: Allow the LLM to autonomously define and index new Node labels and Relationship types as it discovers specialized domain concepts (e.g., "ChemicalBond", "LegalPrecedent").
+
+#### 4. Graph-Aware Task Routing
+- **Goal**: Intelligent retrieval performance.
+- **Implementation**: Teach the "Executive" agent to detect when a query requires "Structural/Relational Thinking" (Graph) vs "Semantic Similarity" (Vector) and only trigger the graph engine when necessary.
+
+#### 5. Multi-Dialect Support
+- **Goal**: Reduce vendor lock-in.
+- **Implementation**: Add support for **Memgraph** or **FalkorDB** as alternative backends while maintaining the same Universal LLM frontend.
+
+#### 6. Temporal "Self-Healing"
+- **Goal**: Handle outdated facts.
+- **Implementation**: Implement relationship versioning where agents can move contradicted facts to a `WAS_FORMERLY` state, preserving the history of project evolution.
+
+---
+
+### Performance, Cost Control, Reliability & Observability (Ongoing)
 
 #### 🤖 Optional AI-assisted install mode (Nice-to-have / Optional for v0.2.0)
 An optional installer mode that can use:
