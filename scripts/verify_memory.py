@@ -45,8 +45,8 @@ async def verify_memory(present_ids=None, deleted_ids=None):
             
     print(f"✅ Found Agent Zero root at: {a0_root}")
     
-    # Check FAISS
-    print("\n--- FAISS Vector Database Check ---")
+    # Check Agent Zero Vector Memory (Standard Memory)
+    print("\n--- Agent Zero Vector Memory Check ---")
     try:
         import initialize
         import python.helpers.memory as memory_mod
@@ -54,10 +54,10 @@ async def verify_memory(present_ids=None, deleted_ids=None):
         
         agent_config = initialize.initialize_agent()
         db, _ = Memory.initialize(None, agent_config.embeddings_model, "default", False)
-        print("✅ FAISS index loaded successfully.")
+        print("✅ Vector Memory index loaded successfully.")
         
         if present_ids:
-            print(f"\nVerifying Presence of {len(present_ids)} Memory IDs:")
+            print(f"\nVerifying Presence of {len(present_ids)} Memory IDs in Vector Memory:")
             found_docs = db.get_by_ids(present_ids)
             found_ids = [doc.metadata.get('id') for doc in found_docs if doc is not None]
             
@@ -79,10 +79,10 @@ async def verify_memory(present_ids=None, deleted_ids=None):
                     all_clean = False
             
             if all_clean:
-                print(f"  ✅ VERIFIED DELETED: All {len(deleted_ids)} IDs are completely gone from FAISS.")
+                print(f"  ✅ VERIFIED DELETED: All {len(deleted_ids)} IDs are completely gone from Vector Memory.")
                 
     except Exception as e:
-        print(f"❌ FAISS check failed: {e}")
+        print(f"❌ Vector Memory check failed: {e}")
 
     # Check Neo4j
     print("\n--- Neo4j Knowledge Graph Check ---")
@@ -103,7 +103,7 @@ async def verify_memory(present_ids=None, deleted_ids=None):
             print(f"✅ Successfully connected to Neo4j at {neo4j_uri} (Database: {neo4j_db})")
             
             if present_ids:
-                print(f"\nVerifying Graph Entities for {len(present_ids)} IDs:")
+                print(f"\nVerifying Graph Entities and RRF Context for {len(present_ids)} IDs:")
                 with driver.session(database=neo4j_db) as session:
                     for cid in present_ids:
                         # Check graph for exact ID matches
@@ -112,6 +112,12 @@ async def verify_memory(present_ids=None, deleted_ids=None):
                         if record:
                             etype = record.get("type") or record.get("label") or "Entity"
                             print(f"  ✅ VERIFIED IN GRAPH: {cid} (Type: {etype})")
+                            
+                            # Check for document relationships (SPEP Protocol)
+                            rel_result = session.run("MATCH (n)-[r:MENTIONS|CONTAINS|REFERENCES]-(d:Document) WHERE n.name = $id OR n.id = $id RETURN d.id as doc_id LIMIT 5", id=cid)
+                            rels = [r["doc_id"] for r in rel_result]
+                            if rels:
+                                print(f"    🔗 Linked Documents (RRF Candidates): {', '.join(rels)}")
                         else:
                             print(f"  ❌ FAILED (MISSING IN GRAPH): {cid}")
             
@@ -120,7 +126,7 @@ async def verify_memory(present_ids=None, deleted_ids=None):
     except ImportError:
         print("❌ neo4j python package not installed. (Run: pip install neo4j)")
     except Exception as e:
-        print(f"❌ Neo4j connection check failed: {e}")
+        print(f"❌ Neo4j/RRF check failed: {e}")
         
     print("\n=== Verification Complete ===")
 
