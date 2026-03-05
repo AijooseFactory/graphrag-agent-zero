@@ -138,7 +138,7 @@ async def verify_memory(present_ids=None, deleted_ids=None):
     print("\n=== Verification Complete ===")
 
 def main():
-    parser = argparse.ArgumentParser(description="GraphRAG for Agent Zero - Generic Memory Verification Script")
+    parser = argparse.ArgumentParser(description="Agent Zero Vector Memory - Generic Verification Script")
     parser.add_argument("--present", type=str, help="Comma-separated list of Memory IDs that MUST be present.")
     parser.add_argument("--deleted", type=str, help="Comma-separated list of Memory IDs that MUST be deleted.")
     
