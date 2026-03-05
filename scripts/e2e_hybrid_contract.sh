@@ -367,6 +367,14 @@ run_case() {
       CASE_RESULTS["${case_name}"]="FAIL"
       exit 1
     }
+    if [ "${case_name}" = "B_on_memory_plus_graph" ]; then
+      echo "Verifying RRF fusion marker..."
+      echo "${logs}" | grep -q "GRAPHRAG_RRF_ORDER:" || {
+        echo "FAIL: ${case_name} missing GRAPHRAG_RRF_ORDER"
+        CASE_RESULTS["${case_name}"]="FAIL"
+        exit 1
+      }
+    fi
     if [ "${expect_graph}" = "NO" ] && [ "${expect_noop_marker}" = "YES" ]; then
       echo "${logs}" | grep -q "GRAPHRAG_NOOP_NEO4J_DOWN" || {
         echo "FAIL: ${case_name} missing GRAPHRAG_NOOP_NEO4J_DOWN"

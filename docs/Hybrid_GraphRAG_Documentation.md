@@ -431,13 +431,19 @@ erDiagram
 │   ├── neo4j_connector.py    ← Resilience Layer
 │   └── safe_cypher.py        ← Security Layer
 │
-├── usr/extensions/           ← Persistent Volume
+├── usr/extensions/           ← Persistence Layer
 │   ├── agent_init/
 │   │   └── _80_graphrag.py   ← Dynamic Patching
 │   └── system_prompt/
 │       └── _80_graphrag.md   ← Cognitive Inject
 └── usr/memory/default/       ← Agent Zero Storage
 ```
+
+> [!NOTE]
+> **Persistence Mechanisms**:
+> - **Dev Environment**: Uses named volumes (`graphrag_a0_usr`) for the `/a0/usr` directory.
+> - **Bench/Production**: May use bind mounts (`./data:/a0/usr`) for direct host access.
+> - **Neo4j**: Always persisted via named volumes (`neo4j-data`) to prevent graph data loss.
 
 ## Hook Integration (PR #1176)
 

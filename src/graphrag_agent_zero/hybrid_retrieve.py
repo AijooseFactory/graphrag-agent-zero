@@ -205,6 +205,9 @@ class HybridRetriever:
         sorted_doc_ids = sorted(combined_scores.keys(), key=lambda x: combined_scores[x], reverse=True)
         final_doc_ids = sorted_doc_ids[:self.max_results]
         
+        # Log fusion results for E2E verification
+        logger.info("GRAPHRAG_RRF_ORDER: %s", final_doc_ids)
+        
         # Prepare final text context (prioritizing vector text for documents found in both)
         vector_text_map = { (r.get("doc_id") or r.get("source")): r.get("text", "") for r in vector_results if (r.get("doc_id") or r.get("source")) }
         
