@@ -56,7 +56,7 @@ class Neo4jConfig:
     uri: str = "bolt://localhost:7687"
     http_uri: str = "http://localhost:7474"
     user: str = "neo4j"
-    password: str = "graphrag2026"
+    password: str = ""
     database: str = "neo4j"
     connection_timeout_ms: int = 2000
     query_timeout_ms: int = 10000
@@ -70,7 +70,7 @@ class Neo4jConfig:
             uri=os.getenv("NEO4J_URI", "bolt://localhost:7687"),
             http_uri=os.getenv("NEO4J_HTTP_URI", "http://localhost:7474"),
             user=os.getenv("NEO4J_USER", "neo4j"),
-            password=os.getenv("NEO4J_PASSWORD", "graphrag2026"),
+            password=os.getenv("NEO4J_PASSWORD", ""),
             database=os.getenv("NEO4J_DATABASE", "neo4j"),
             connection_timeout_ms=int(os.getenv("NEO4J_CONNECTION_TIMEOUT_MS", "2000")),
             query_timeout_ms=int(os.getenv("NEO4J_QUERY_TIMEOUT_MS", "10000")),

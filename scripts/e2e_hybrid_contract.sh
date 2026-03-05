@@ -368,12 +368,22 @@ run_case() {
       exit 1
     }
     if [ "${case_name}" = "B_on_memory_plus_graph" ]; then
-      echo "Verifying RRF fusion marker..."
-      echo "${logs}" | grep -q "GRAPHRAG_RRF_ORDER:" || {
+      echo "Verifying RRF fusion marker and ranking logic..."
+      local rrf_line
+      rrf_line="$(echo "${logs}" | grep "GRAPHRAG_RRF_ORDER:")"
+      if [ -z "${rrf_line}" ]; then
         echo "FAIL: ${case_name} missing GRAPHRAG_RRF_ORDER"
         CASE_RESULTS["${case_name}"]="FAIL"
         exit 1
-      }
+      fi
+      # Verify the shared token appears in the ranking (proving graph-vector fusion worked)
+      if echo "${rrf_line}" | grep -q "e2e_hybrid_${SHARED_TOKEN}"; then
+         echo "PASS: RRF Ranking contains experimental sentinel ID"
+      else
+         echo "FAIL: RRF Ranking missing sentinel ID. Fusion failed to promote graph results."
+         CASE_RESULTS["${case_name}"]="FAIL"
+         exit 1
+      fi
     fi
     if [ "${expect_graph}" = "NO" ] && [ "${expect_noop_marker}" = "YES" ]; then
       echo "${logs}" | grep -q "GRAPHRAG_NOOP_NEO4J_DOWN" || {
@@ -413,7 +423,7 @@ IMAGE_DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "agentzero/gr
 
 NEO4J_URI_UP="$(env_or_default "NEO4J_URI" "bolt://host.docker.internal:7687")"
 NEO4J_USER_UP="$(env_or_default "NEO4J_USER" "neo4j")"
-NEO4J_PASSWORD_UP="$(env_or_default "NEO4J_PASSWORD" "graphrag2026")"
+NEO4J_PASSWORD_UP="$(env_or_default "NEO4J_PASSWORD" "")"
 NEO4J_DATABASE_UP="$(env_or_default "NEO4J_DATABASE" "neo4j")"
 
 run_case "A_off_stock_memory_only" "false" \
