@@ -2,7 +2,9 @@
     "name": "graphrag-agent-zero-e2e",
     "private": true,
     "devDependencies": {
-        "@playwright/test": "^1.49.0"
+        "@playwright/test": "^1.49.0",
+        "@types/node": "^22.0.0",
+        "typescript": "^5.0.0"
     },
     "scripts": {
         "test:e2e": "playwright test"

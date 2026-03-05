@@ -12,6 +12,6 @@
         ]
     },
     "include": [
-        "tests/e2e/playwright/**/*.ts"
+        "tests/e2e/**/*.ts"
     ]
 }
