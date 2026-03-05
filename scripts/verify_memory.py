@@ -27,7 +27,7 @@ def find_agent_zero_root():
     return None
 
 async def verify_memory(present_ids=None, deleted_ids=None):
-    print("=== GraphRAG for Agent Zero - Memory Verification ===\n")
+    print("=== Agent Zero Vector Memory - Ground Truth Verification ===\n")
     
     a0_root = find_agent_zero_root()
     if not a0_root:
@@ -44,6 +44,13 @@ async def verify_memory(present_ids=None, deleted_ids=None):
             load_dotenv(env_path)
             
     print(f"✅ Found Agent Zero root at: {a0_root}")
+    
+    # Ground Truth context: show explicitly where settings/memory are loaded from
+    usr_path = os.path.join(a0_root, "usr")
+    if os.path.exists(usr_path):
+        is_link = os.path.islink(usr_path)
+        print(f"📊 Persistence Check: /usr directory found ({'Symlink' if is_link else 'Directory'})")
+        print(f"   Storage Mode: { 'Named Volume/Bind Mount' if os.path.exists(os.path.join(usr_path, 'settings.json')) else 'Unknown'}")
     
     # Check Agent Zero Vector Memory (Standard Memory)
     print("\n--- Agent Zero Vector Memory Check ---")
