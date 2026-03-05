@@ -3,7 +3,6 @@ import sys
 import argparse
 import logging
 import asyncio
-from pathlib import Path
 
 # Try to load dotenv, but handle gracefully if not present
 try:
@@ -53,9 +52,9 @@ async def verify_memory(present_ids=None, deleted_ids=None):
         is_mount = os.path.ismount(usr_path)
         print(f"📊 Persistence Check: /usr directory found ({'Symlink' if is_link else 'Directory'})")
         if is_mount:
-            print(f"   Storage Mode: Persistent Mount Point (Docker Volume/Bind verified via os.path.ismount)")
+            print("   Storage Mode: Persistent Mount Point (Docker Volume/Bind verified via os.path.ismount)")
         else:
-            print(f"   Storage Mode: Local File System (Not a mount point)")
+            print("   Storage Mode: Local File System (Not a mount point)")
     
     # Check Agent Zero Vector Memory (Standard Memory)
     print("\n--- Agent Zero Vector Memory Check ---")

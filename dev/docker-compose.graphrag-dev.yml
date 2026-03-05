@@ -42,6 +42,7 @@ services:
     volumes:
       - graphrag_a0_usr:/a0/usr
       - ../src:/a0/src
+      - ../scripts:/a0/usr/scripts:ro
       - ./llm_stub:/a0/dev/llm_stub:ro
 
 volumes:

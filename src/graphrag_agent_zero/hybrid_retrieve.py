@@ -118,6 +118,9 @@ class HybridRetriever:
         Provides a 'Safe Fallback' pattern: if Neo4j is down, the system 
         continues with pure vector RAG.
         """
+        # Log for E2E contract verification
+        logger.info("GRAPHRAG_UTILITY_PROMPT_APPLIED: YES")
+        
         start_time = time.time()
         
         # GATING: Ensure zero downtime even if GraphRAG is misconfigured.

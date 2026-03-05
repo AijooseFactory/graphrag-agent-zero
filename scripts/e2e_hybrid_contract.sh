@@ -300,6 +300,26 @@ assert_not_contains() {
   fi
 }
 
+assert_log() {
+  local case_name="$1"
+  local needle="$2"
+  local expected="$3"
+  local logs="$4"
+  if [ "${expected}" = "YES" ]; then
+    echo "${logs}" | grep -q "${needle}" || {
+      echo "FAIL: ${case_name} missing ${needle}"
+      CASE_RESULTS["${case_name}"]="FAIL"
+      exit 1
+    }
+  else
+    echo "${logs}" | grep -q "${needle}" && {
+      echo "FAIL: ${case_name} unexpectedly contained ${needle}"
+      CASE_RESULTS["${case_name}"]="FAIL"
+      exit 1
+    }
+  fi
+}
+
 # Per-case result tracking for summary.json
 declare -A CASE_RESULTS
 
@@ -322,7 +342,10 @@ run_case() {
   force_stub_settings
   wait_http_200 "http://localhost:8087/health"
 
-  # ── Evidence: compose ps ──
+  # ── Evidence: mount grounding Check (B2 Ground Truth) ──
+  docker compose -f "${COMPOSE_FILE}" exec -T "${SERVICE}" bash -lc "source /opt/venv-a0/bin/activate && python3 /a0/usr/scripts/verify_memory.py" > "${ART_DIR}/${case_name}.grounding.txt" 2>&1 || true
+
+  # ── Evidence: stub logs ──
   docker compose -f "${COMPOSE_FILE}" ps > "${ART_DIR}/${case_name}.compose_ps.txt" 2>&1 || true
 
   # ── Evidence: scrubbed environment ──
@@ -362,11 +385,7 @@ run_case() {
   logs="$(cat "${ART_DIR}/${case_name}.agent.log")"
 
   if [ "${expect_graph}" = "YES" ]; then
-    echo "${logs}" | grep -q "GRAPHRAG_CONTEXT_INJECTED" || {
-      echo "FAIL: ${case_name} missing GRAPHRAG_CONTEXT_INJECTED"
-      CASE_RESULTS["${case_name}"]="FAIL"
-      exit 1
-    }
+    assert_log "${case_name}" "GRAPHRAG_CONTEXT_INJECTED" "YES" "${logs}"
     if [ "${case_name}" = "B_on_memory_plus_graph" ]; then
       echo "Verifying RRF fusion marker and ranking logic..."
       local rrf_line
@@ -386,20 +405,16 @@ run_case() {
       fi
     fi
     if [ "${expect_graph}" = "NO" ] && [ "${expect_noop_marker}" = "YES" ]; then
-      echo "${logs}" | grep -q "GRAPHRAG_NOOP_NEO4J_DOWN" || {
-        echo "FAIL: ${case_name} missing GRAPHRAG_NOOP_NEO4J_DOWN"
-        CASE_RESULTS["${case_name}"]="FAIL"
-        exit 1
-      }
+      assert_log "${case_name}" "GRAPHRAG_NOOP_NEO4J_DOWN" "YES" "${logs}"
     fi
   fi
 
   # ── Evidence: Utility Prompt Verification ──
-  echo "${logs}" | grep -q "GRAPHRAG_UTILITY_PROMPT_APPLIED" || {
-    echo "FAIL: ${case_name} missing GRAPHRAG_UTILITY_PROMPT_APPLIED"
-    CASE_RESULTS["${case_name}"]="FAIL"
-    exit 1
-  }
+  if [ "${case_name}" != "A_off_stock_memory_only" ]; then
+    assert_log "${case_name}" "GRAPHRAG_UTILITY_PROMPT_APPLIED" "YES" "${logs}"
+  else
+    assert_log "${case_name}" "GRAPHRAG_UTILITY_PROMPT_APPLIED" "NO" "${logs}"
+  fi
 
   CASE_RESULTS["${case_name}"]="PASS"
   echo "PASS: ${case_name}"
