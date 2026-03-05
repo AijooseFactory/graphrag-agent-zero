@@ -54,7 +54,14 @@ Only these edge types are followed during graph expansion:
 - **Path A (Doc-seeded):** Vector results → entity pinning → graph expand → pack
 - **Path B (Query-only):** Entity term extraction → direct lookup → graph expand → pack
 
-## 4. Wiring
+## 4. Advanced Brain Protocols (2026)
+
+The implementation MUST support the following cognitive directives:
+1. **Conflict Handling**: Discrepancies between Vector context and Graph topology MUST be resolved by prioritizing evidence found in `[DOC-ID]` citations.
+2. **Output-Driven Entity Resolution**: The system MUST use normalized, canonical naming in its context synthesis to prevent downstream graph fragmentation during re-indexing.
+3. **Cognitive Consolidation**: Recurring facts across multiple memories SHOULD be promoted to "Canon" status in reasoning to resolve temporal data discrepancies.
+
+## 5. Wiring
 
 - Extension hook: `message_loop_prompts_after/_80_graphrag.py`
 - Injection key: `extras_persistent["graphrag"]`

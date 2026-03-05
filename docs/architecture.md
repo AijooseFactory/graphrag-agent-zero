@@ -13,10 +13,17 @@ GraphRAG for Agent Zero is an extension that enhances the agent's retrieval capa
 ## The SPEP Protocol (Seed -> Pin -> Expand -> Pack)
 
 The core retrieval engine follows the **SPEP** protocol to ensure deterministic, high-signal context:
-1.  **Seed**: Retrieve the initial document chunk IDs using standard vector search (FAISS/Chromadb).
+1.  **Seed**: Retrieve the initial document chunk IDs using standard vector search (Agent Zero Vector Memory).
 2.  **Pin**: Extract key entities from the seed documents and "pin" them to the Knowledge Graph.
 3.  **Expand**: Perform a bounded, multi-hop expansion in Neo4j from the pinned entities using allowlisted relationships.
 4.  **Pack**: Pack the combined vector text and graph relationships into a single, structured context window for the agent.
+
+## Advanced Brain Protocols (2026)
+
+To elevate retrieval into autonomous reasoning, the Utility Model adheres to three cognitive protocols:
+- **Conflict Handling**: Discrepancies between Vector and Graph data are resolved by prioritizing `[DOC-ID]` evidence and labeling uncertainty.
+- **Output-Driven Entity Resolution**: The model uses normalized, canonical naming in its responses to ensure downstream indexing maintains graph coherence.
+- **Cognitive Consolidation**: Stable, recurring facts are promoted to "Canon" knowledge during reasoning to resolve temporal or source-level conflicts.
 
 ## Safety Firewall: Safe Cypher
 

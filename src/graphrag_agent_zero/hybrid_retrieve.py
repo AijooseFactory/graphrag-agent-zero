@@ -82,12 +82,18 @@ class HybridRetriever:
         max_entities: int = 100,
         max_results: int = 50,
         query_timeout_ms: int = 10000,
+        rrf_k: int = 60,
+        vector_weight: float = 0.4,
+        graph_weight: float = 0.6,
     ):
         # Strict enforcement of performance boundaries
         self.max_hops = min(max_hops, 2)  
         self.max_entities = min(max_entities, 100)
         self.max_results = max_results
         self.query_timeout_ms = query_timeout_ms
+        self.rrf_k = rrf_k
+        self.vector_weight = vector_weight
+        self.graph_weight = graph_weight
         
         # INTERNAL CACHE: Minimizes expensive Bolt roundtrips.
         # Implements bounded LRU memory constraint with TTL flush.
@@ -157,14 +163,16 @@ class HybridRetriever:
         start_time: float,
     ) -> RetrievalResult:
         """
-        The multi-stage GraphRAG pipeline.
+        The multi-stage GraphRAG pipeline with RRF Fusion.
         """
-        # 1. PINNING: Identify which documents we're starting from
+        # 1. PINNING: Identify which documents we're starting from (Vector Rank)
+        vector_rankings = {}
         seed_doc_ids = []
-        for result in vector_results:
+        for rank, result in enumerate(vector_results):
             doc_id = result.get("doc_id") or result.get("source")
             if doc_id:
                 seed_doc_ids.append(doc_id)
+                vector_rankings[doc_id] = rank
         
         if not seed_doc_ids:
             return self._query_only_graph_retrieval(query, vector_results, start_time)
@@ -177,15 +185,38 @@ class HybridRetriever:
         
         cache_hit = hit_entities or hit_expand
         
-        # 4. DISCOVER: Find docs linked to these new entities
+        # 4. DISCOVER: Find docs linked to these new entities (Graph Rank)
         related_docs = self._get_related_documents(seed_doc_ids)
+        graph_rankings = {doc_id: rank for rank, doc_id in enumerate(related_docs)}
         
-        all_doc_ids = list(set(seed_doc_ids + related_docs))
-        texts = [r.get("text", "") for r in vector_results]
+        # 5. RRF FUSION: Calculate combined scores
+        combined_scores = {}
+        all_unique_docs = set(seed_doc_ids) | set(related_docs)
+        
+        for doc_id in all_unique_docs:
+            v_score = 1.0 / (self.rrf_k + vector_rankings[doc_id]) if doc_id in vector_rankings else 0.0
+            g_score = 1.0 / (self.rrf_k + graph_rankings[doc_id]) if doc_id in graph_rankings else 0.0
+            
+            # Application of Hybrid Weights (Default: Graph 0.6, Vector 0.4)
+            score = (v_score * self.vector_weight) + (g_score * self.graph_weight)
+            combined_scores[doc_id] = score
+            
+        # Re-rank based on RRF scores
+        sorted_doc_ids = sorted(combined_scores.keys(), key=lambda x: combined_scores[x], reverse=True)
+        final_doc_ids = sorted_doc_ids[:self.max_results]
+        
+        # Prepare final text context (prioritizing vector text for documents found in both)
+        vector_text_map = { (r.get("doc_id") or r.get("source")): r.get("text", "") for r in vector_results if (r.get("doc_id") or r.get("source")) }
+        
+        final_texts = []
+        for doc_id in final_doc_ids:
+            if doc_id in vector_text_map:
+                final_texts.append(vector_text_map[doc_id])
+            # If doc_id is only in graph, we might want to fetch text, but for now we follow safety contract
         
         return RetrievalResult(
-            text="\n\n".join(texts),
-            source_doc_ids=all_doc_ids[:self.max_results],
+            text="\n\n".join(final_texts),
+            source_doc_ids=final_doc_ids,
             entities=expanded_entities[:self.max_entities],
             relationships=relationships,
             graph_derived=True,
@@ -349,8 +380,9 @@ class HybridRetriever:
         return list(all_entities)[:self.max_entities], all_relationships
 
     def _get_related_documents(self, doc_ids: List[str]) -> List[str]:
-        """Get documents related to seed documents via graph"""
+        """Get documents related to seed documents via graph (Preserves Rank)"""
         related = []
+        seen = set()
         try:
             connector = get_connector()
             for doc_id in doc_ids:
@@ -359,8 +391,12 @@ class HybridRetriever:
                     {"doc_id": doc_id, "limit": 10}
                 )
                 if result:
-                    related.extend([r["related_doc"] for r in result if r.get("related_doc")])
+                    for r in result:
+                        rel_doc = r.get("related_doc")
+                        if rel_doc and rel_doc not in seen:
+                            related.append(rel_doc)
+                            seen.add(rel_doc)
         except Exception as e:
             logger.warning(f"Document relationship lookup failed: {e}")
         
-        return list(set(related))
+        return related
