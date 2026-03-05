@@ -34,7 +34,6 @@ Based on the current architecture, implementation, and v0.1.1 features, here are
 
 | Area | Improvement | Rationale |
 |------|-------------|----------|
-| **Hybrid Research Brain** | Sets a "Google Gemini 3+" Research Prompt as the recursive Utility Model brain for autonomous cross-domain synthesis. |
 | **LLM Entity Extraction** | Ensure configured Utility Model uses an LLM-based entity extraction layer | The current implementation is a foundation but lacks the semantic extraction that makes GraphRAG powerful. |
 
 ---
