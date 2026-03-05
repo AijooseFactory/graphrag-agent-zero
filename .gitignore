@@ -39,7 +39,6 @@ brain/
 results/
 artifacts/
 walkthrough.md
-!docs/WALKTHROUGH.md
 IMPLEMENTATION_PLAN.md
 TASK.md
 scan_results.txt
