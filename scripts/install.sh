@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hybrid GraphRAG for Agent Zero — One-Command Installer (v0.2.0)
+# Hybrid GraphRAG for Agent Zero — One-Command Installer (v0.2.1)
 #
 # Usage:
 #   ./scripts/install.sh /path/to/agent-zero
@@ -32,7 +32,7 @@ done
 
 if [ -z "$A0_ROOT" ]; then
   echo ""
-  echo "  Hybrid GraphRAG for Agent Zero — Installer (v0.2.0)"
+  echo "  Hybrid GraphRAG for Agent Zero — Installer (v0.2.1)"
   echo "  ───────────────────────────────────────────────────"
   echo ""
   echo "  Usage:  ./scripts/install.sh [options] <agent-zero-path>"
@@ -151,6 +151,12 @@ mkdir -p "$A0_ROOT/usr/extensions/agent_init"
 mkdir -p "$A0_ROOT/usr/extensions/system_prompt"
 mkdir -p "$A0_ROOT/usr/prompts"
 
+# Remove legacy files from pre-v0.2.1 that cause stale EXTRAS injection
+rm -f "$A0_ROOT/usr/extensions/memory_saved_after/_80_graphrag.py" 2>/dev/null
+rm -f "$A0_ROOT/usr/extensions/agent_init/02_graphrag_patch.py" 2>/dev/null
+# Purge stale bytecode caches
+find "$A0_ROOT/usr/extensions" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+
 cp "$SCRIPT_DIR/installer_files/_80_graphrag.py" "$A0_ROOT/usr/extensions/message_loop_prompts_after/"
 cp "$SCRIPT_DIR/installer_files/_80_graphrag.py" "$A0_ROOT/usr/extensions/system_prompt/"
 cp "$SCRIPT_DIR/installer_files/_80_graphrag_sync.py" "$A0_ROOT/usr/extensions/memory_saved_after/"
@@ -181,7 +187,7 @@ fi
 
 echo ""
 echo "  ───────────────────────────────────────────"
-echo "  ✅  Hybrid GraphRAG v0.2.0 installed successfully!"
+echo "  ✅  Hybrid GraphRAG v0.2.1 installed successfully!"
 echo ""
 echo "  Next steps:"
 echo "    1. Edit $A0_ROOT/.env (set NEO4J_PASSWORD & GRAPH_RAG_ENABLED=true)"
