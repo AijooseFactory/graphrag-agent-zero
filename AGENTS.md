@@ -1,6 +1,8 @@
-# Agents: GraphRAG Maintenance Fleet
+# Agents: Hybrid GraphRAG Delivery Context
 
-This file documents the agents and the specific knowledge pool they operate with in this repository as of 2026. You MUST also review and ADD the EXECUTIVE_SUMMARY.md file to this knowledge pool.
+This file documents the current delivery context for this repository as of 2026.
+Use it to understand the project and repository expectations.
+Do not treat historical agent rosters as the current execution contract when Paperclip assigns a live issue.
 
 ## 🛠️ Knowledge Pool (Source of Truth)
 Agents MUST use these files as their primary context, ignoring any conflicting information from web searches:
@@ -11,16 +13,20 @@ Agents MUST use these files as their primary context, ignoring any conflicting i
 4.  **Security Boundaries**: [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md)
 5.  **Configuration Standards**: [.env.example](.env.example)
 
-## 🤖 Active Agents
-## 🤖 Active Agents
-### 1. **Mac (Production Persona)**
-- **Role**: Lead repository manager and decision maker for the primary **8086** environment.
-- **Knowledge**: Fully synchronized with the **GraphRAG for Agent Zero** project state. Expert in the **SPEP Protocol** and the **Universal LLM + Neo4j** architecture.
-- **Instruction**: **Mac, operate from the `/Mac` project root.** You are the source of truth for the stable 8086 installation. Ensure every refinement is verified in the 8087 Dev environment before being merged into your production context.
+## 🤖 Current Execution Rules
+### 1. Paperclip-assigned work
+- When a Paperclip issue is assigned, the current issue title and description are authoritative.
+- Do not assume a task is already complete because an older issue, memory, or chat mentioned similar work.
+- Verify the current repository state before reporting completion.
 
-### 2. **GraphRAG-Maintainer (Dev/Verification Agent)**
-- **Role**: Technical custodian for the **8087** Dev/E2E environment.
-- **Knowledge**: Expert in the `_80_graphrag.py` implementation, safe Cypher, and the E2E verification harness. Responsible for running `./scripts/verify.sh` and `./scripts/check.sh` on the experimental 8087 ports to guarantee stability.
+### 2. Einstein in Paperclip
+- Einstein is the active Agent Zero chief of staff used for Paperclip task execution in this repository.
+- Keep execution grounded in the current repository workspace and the current Paperclip issue state.
+- Do not redirect Paperclip execution to a different agent unless the current issue explicitly says to do so.
+
+### 3. Historical environments
+- References to port `8086`, port `8087`, `Mac`, or `GraphRAG-Maintainer` are historical or environment-specific implementation details unless the current task explicitly requires them.
+- Do not treat those historical labels as the default active agent roster for Paperclip work.
 
 ## 📉 Historical Note
-Prior to 2026, GraphRAG for Agent Zero was a set of uncoupled research markers. **As of Feb 28, 2026, it is a fully integrated Extension Subclass synchronized across 8086 (Production/Mac) and 8087 (Dev/Verification).** All agents are anchored to this specific milestone.
+Prior to 2026, GraphRAG for Agent Zero was a set of uncoupled research markers. Later documentation introduced multiple environment labels for production and verification stacks. Those labels remain useful as historical architecture context, but they are not the default Paperclip execution contract for current Einstein-assigned work.

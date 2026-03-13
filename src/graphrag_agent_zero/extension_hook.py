@@ -150,6 +150,109 @@ def _baseline_response(vector_results: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
+def memory_save_before(object: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extension hook called BEFORE memory is saved.
+    
+    This hook allows extensions to inspect and modify the memory object
+    before it is persisted. Extensions can edit the object in-place.
+    
+    Args:
+        object: A dict containing the memory data to be saved.
+            Expected keys:
+            - text: str - The memory text content
+            - metadata: dict - Optional metadata about the memory
+            - memory_subdir: str - The memory subdirectory
+            
+    Returns:
+        The (potentially modified) object dict.
+        If object['text'] is None after this hook, the save will be skipped.
+        
+    Extension Contract:
+        - Extensions receive the object dict and can modify it
+        - If object['text'] == None, the save operation is skipped
+        - No try/catch - extensions must handle their own errors
+        - Return the modified object for the next extension in chain
+    """
+    if not is_enabled():
+        return object
+    
+    if not is_neo4j_available():
+        logger.debug("GraphRAG enabled but Neo4j unavailable, skipping memory_save_before")
+        return object
+    
+    # Extract entities and relationships from the memory text
+    text = object.get("text", "")
+    if not text:
+        return object
+    
+    # Build graph structure from the memory content
+    builder = get_builder()
+    doc = {
+        "id": object.get("metadata", {}).get("id", "unknown"),
+        "content": text
+    }
+    stats = builder.build_from_document(doc)
+    
+    # Add graph-derived metadata to the object
+    if "metadata" not in object:
+        object["metadata"] = {}
+    object["metadata"]["graph_entities"] = stats.get("entities", 0)
+    object["metadata"]["graph_relationships"] = stats.get("relationships", 0)
+    object["metadata"]["graph_enriched"] = True
+    
+    logger.debug(f"memory_save_before: enriched with {stats}")
+    
+    return object
+
+
+def memory_save_after(object: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extension hook called AFTER memory is saved.
+    
+    This hook allows extensions to perform post-save operations.
+    It receives the same object dict that was saved, plus any
+    save result metadata.
+    
+    Args:
+        object: A dict containing the saved memory data.
+            Expected keys:
+            - text: str - The memory text content
+            - metadata: dict - Metadata about the memory including save results
+            - saved_id: str - The ID of the saved memory (if applicable)
+            
+    Returns:
+        The object dict (modifications here won't affect the saved memory
+        but can be used for logging, notifications, etc.)
+        
+    Extension Contract:
+        - Extensions receive the object after save is complete
+        - Modifications here are for side effects only
+        - No try/catch - extensions must handle their own errors
+    """
+    if not is_enabled():
+        return object
+    
+    if not is_neo4j_available():
+        logger.debug("GraphRAG enabled but Neo4j unavailable, skipping memory_save_after")
+        return object
+    
+    # Post-save graph operations
+    # This is where we can sync the graph index after memory is saved
+    saved_id = object.get("saved_id")
+    if saved_id:
+        logger.debug(f"memory_save_after: memory saved with ID {saved_id}")
+    
+    # Log successful graph enrichment
+    metadata = object.get("metadata", {})
+    if metadata.get("graph_enriched"):
+        entities = metadata.get("graph_entities", 0)
+        relationships = metadata.get("graph_relationships", 0)
+        logger.debug(f"memory_save_after: graph enrichment complete - {entities} entities, {relationships} relationships")
+    
+    return object
+
+
 def build_knowledge_graph(documents: List[Dict[str, Any]]) -> Dict[str, int]:
     """
     Ingestion hook to populate Neo4j from a list of documents.
@@ -157,7 +260,7 @@ def build_knowledge_graph(documents: List[Dict[str, Any]]) -> Dict[str, int]:
     Args:
         documents: A list of dicts with 'id' and 'content'.
         
-    MAINTENANCE NOTE for Mac: Use this when you want to batch-index 
+    MAINTENANCE NOTE for Mac: Use this when you want to batch-index
     the workspace memory into the graph.
     """
     if not is_enabled() or not is_neo4j_available():
@@ -193,7 +296,7 @@ def health_check() -> Dict[str, Any]:
 
 def get_cognitive_optimization_prompt() -> Optional[str]:
     """
-    Retrieve the Cognitive Optimization prompt content for injection 
+    Retrieve the Cognitive Optimization prompt content for injection
     into the core agent system prompt.
     """
     try:
@@ -204,4 +307,3 @@ def get_cognitive_optimization_prompt() -> Optional[str]:
     except Exception as e:
         logger.warning(f"Failed to load cognitive optimization prompt: {e}")
     return None
-

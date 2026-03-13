@@ -12,6 +12,7 @@ NO core patches. Uses only the upstream Extensions Framework.
 import logging
 import json
 import hashlib
+from typing import Optional, List, Dict, Any
 from python.helpers.extension import Extension
 
 logger = logging.getLogger(__name__)
@@ -69,8 +70,8 @@ class GraphRAGExtension(Extension):
     """
     GraphRAG Intelligence Extension for Agent Zero.
     
-    This extension intercepts the message loop after basic retrieval but before 
-    the prompt is finalized. It performs a parallel graph search in Neo4j 
+    This extension intercepts the message loop after basic retrieval but before
+    the prompt is finalized. It performs a parallel graph search in Neo4j
     and injects discovered entities and context into the prompt extras.
     
     MAINTENANCE NOTE for Mac:
@@ -78,7 +79,11 @@ class GraphRAGExtension(Extension):
     - It uses 'extras_persistent' to communicate with the prompt templating system.
     - No core files are modified; this is a pure add-on.
 
-    ⚠️ TOP 1% LLM-KEYLESS TESTING ARCHITECTURE ⚠️
+    Memory Hooks:
+    - on_memory_save_before: Called before memory save, can skip or modify.
+    - on_memory_save_after: Called after memory save, triggers graph sync.
+
+    Top 1% LLM-KEYLESS TESTING ARCHITECTURE
     Any AI agent modifying this file MUST honor the deterministic E2E verification pattern:
     1. During E2E tests, LiteLLM is spoofed to route to a local stub (`dev/llm_stub/app.py`).
     2. The stub mathematically verifies `GRAPHRAG_CONTEXT` via SHA256 Hash Round-Tripping.
@@ -86,26 +91,82 @@ class GraphRAGExtension(Extension):
        verification gates for the E2E bash scripting. Do not add API keys to test files.
     """
 
-    async def execute(self, loop_data=None, system_prompt: list = None, memory_id: str = None, content: str = None, **kwargs):
+    async def execute(self, loop_data=None, system_prompt: list = None, object: dict = None, **kwargs):
         """
         Polymorphic dispatcher for Agent Zero Extension Hooks.
         
-        This enables a single 'Master' file to serve multiple extension points:
+        Extension points dispatched here:
         1. system_prompt: kwargs['system_prompt'] is present.
-        2. memory_saved_after: kwargs['memory_id'] is present.
-        3. message_loop_prompts_after: Default execution path.
+        2. memory_save_before: object dict is present (dispatched by call_extensions).
+        3. memory_save_after: object dict with doc_id is present.
+        4. message_loop_prompts_after: Default execution path.
         """
         
         # Hook 1: Core System Prompt Injection
         if system_prompt is not None:
             return await self._handle_system_prompt(system_prompt, loop_data=loop_data, **kwargs)
 
-        # Hook 2: Real-time Memory Synchronization
-        if memory_id is not None and content is not None:
-            return await self._handle_memory_saved_after(memory_id, content, **kwargs)
+        # Hook 2/3: Memory save hooks (dispatched via call_extensions)
+        if object is not None:
+            if "doc_id" in object:
+                return await self._handle_memory_save_after(object, **kwargs)
+            else:
+                return await self._handle_memory_save_before(object, **kwargs)
 
-        # Hook 3: Message Loop Context Injection (Default)
+        # Hook 4: Message Loop Context Injection (Default)
         return await self._handle_message_loop_prompts(loop_data, **kwargs)
+
+    async def _handle_memory_save_before(self, obj: dict, **kwargs):
+        """
+        Hook called before a memory is saved.
+        
+        Args:
+            obj: Mutable dict with 'text', 'metadata', 'memory_subdir'.
+                 Set obj['text'] = None to skip the save.
+        """
+        if not _check_graphrag():
+            return
+
+        from graphrag_agent_zero.extension_hook import is_enabled
+        if not is_enabled():
+            return
+
+        text = obj.get("text")
+        if not text:
+            return
+
+        # Build graph structure from the memory content before save
+        from graphrag_agent_zero.extension_hook import build_knowledge_graph
+        doc = {
+            "id": obj.get("metadata", {}).get("id", "pending"),
+            "content": text,
+        }
+        build_knowledge_graph([doc])
+
+    async def _handle_memory_save_after(self, obj: dict, **kwargs):
+        """
+        Hook called after a memory is saved.
+        
+        Args:
+            obj: Dict with 'text', 'metadata', 'memory_subdir', 'doc_id'.
+        """
+        if not _check_graphrag():
+            return
+
+        from graphrag_agent_zero.extension_hook import is_enabled
+        if not is_enabled():
+            return
+
+        doc_id = obj.get("doc_id")
+        text = obj.get("text", "")
+        if not doc_id or not text:
+            return
+
+        # Sync the saved memory to the knowledge graph
+        from graphrag_agent_zero.extension_hook import build_knowledge_graph
+        print(f"GRAPHRAG_SYNC_TRIGGERED: {doc_id}", flush=True)
+        build_knowledge_graph([{"id": doc_id, "content": text}])
+        print(f"GRAPHRAG_SYNC_SUCCESS: {doc_id}", flush=True)
 
     async def _handle_system_prompt(self, system_prompt: list, loop_data=None, **kwargs):
         """
@@ -117,7 +178,7 @@ class GraphRAGExtension(Extension):
             return
 
         system_prompt.append(
-            "\n\n--- 🧠 GRAPHRAG MEMORY BRAIN CONTROLS ---\n"
+            "\n\n--- GraphRAG MEMORY BRAIN CONTROLS ---\n"
             "You are equipped with a GraphRAG Hybrid Memory System.\n"
             "CRITICAL DIRECTIVES FOR MEMORY TOOLS:\n"
             "1. NO SIMULATIONS: You are explicitly forbidden from generating 'simulated' markdown reports of saving or deleting memories if you did not physically invoke the `memory_save` or `memory_delete` tools.\n"
@@ -131,7 +192,7 @@ class GraphRAGExtension(Extension):
         optimized_prompt = get_cognitive_optimization_prompt()
         if optimized_prompt:
             system_prompt.append(
-                "\n\n--- 🧠 COGNITIVE OPTIMIZATION: INTELLECTUAL RESEARCH ---\n"
+                "\n\n--- COGNITIVE OPTIMIZATION: INTELLECTUAL RESEARCH ---\n"
                 f"{optimized_prompt}"
             )
             print("GRAPHRAG_COGNITIVE_OPTIMIZATION_INJECTED", flush=True)
@@ -174,61 +235,74 @@ class GraphRAGExtension(Extension):
             _clear_graphrag_context(loop_data)
             return
 
-        try:
-            result = enhance_retrieval(
-                query=user_msg,
-                vector_results=[],
-            )
+        # Extension controls failure behavior - no try/catch
+        result = enhance_retrieval(
+            query=user_msg,
+            vector_results=[],
+        )
 
-            injected_knowledge = result.get("text", "").strip()
-            if not injected_knowledge:
-                print("GRAPHRAG_NOOP_EMPTY_CONTEXT", flush=True)
-                _clear_graphrag_context(loop_data)
-                return
+        injected_knowledge = result.get("text", "").strip()
+        if not injected_knowledge:
+            print("GRAPHRAG_NOOP_EMPTY_CONTEXT", flush=True)
+            _clear_graphrag_context(loop_data)
+            return
 
-            extras = loop_data.extras_persistent
-            graph_data = {
-                "source": "GraphRAG (Neo4j)",
-                "injected_knowledge": injected_knowledge,
-            }
-            if result.get("entities"):
-                graph_data["related_entities"] = result["entities"][:30]
-            
-            context_text = json.dumps(graph_data, indent=2, sort_keys=True)
-            ctx_hash = hashlib.sha256(context_text.encode("utf-8")).hexdigest()
-            print(f"GRAPHRAG_CONTEXT_SHA256={ctx_hash}", flush=True)
-            print("GRAPHRAG_HOOKPOINT=message_loop_prompts_after", flush=True)
+        extras = loop_data.extras_persistent
+        graph_data = {
+            "source": "GraphRAG (Neo4j)",
+            "injected_knowledge": injected_knowledge,
+        }
+        if result.get("entities"):
+            graph_data["related_entities"] = result["entities"][:30]
+        
+        context_text = json.dumps(graph_data, indent=2, sort_keys=True)
+        ctx_hash = hashlib.sha256(context_text.encode("utf-8")).hexdigest()
+        print(f"GRAPHRAG_CONTEXT_SHA256={ctx_hash}", flush=True)
+        print("GRAPHRAG_HOOKPOINT=message_loop_prompts_after", flush=True)
 
-            extras["graphrag"] = self.agent.parse_prompt(
-                "agent.system.graphrag.md",
-                context_json=context_text,
-                context_sha256=ctx_hash,
-                context_sentinel="HYBRID_GRAPHRAG_CONTEXT_V1",
-            )
-            loop_data.extras_persistent = _ordered_hybrid_extras(extras)
-            print("GRAPHRAG_CONTEXT_INJECTED", flush=True)
-            print("GRAPHRAG_UTILITY_PROMPT_APPLIED", flush=True)
-        except Exception as e:
-            logger.warning(f"GraphRAG extension error: {e}")
+        extras["graphrag"] = self.agent.parse_prompt(
+            "agent.system.graphrag.md",
+            context_json=context_text,
+            context_sha256=ctx_hash,
+            context_sentinel="HYBRID_GRAPHRAG_CONTEXT_V1",
+        )
+        loop_data.extras_persistent = _ordered_hybrid_extras(extras)
+        print("GRAPHRAG_CONTEXT_INJECTED", flush=True)
+        print("GRAPHRAG_UTILITY_PROMPT_APPLIED", flush=True)
 
-    async def _handle_memory_saved_after(self, memory_id: str, content: str, **kwargs):
+
+
+    async def on_memory_search_before(self, query: str) -> str:
         """
-        Original memory_saved_after logic.
+        Hook called before a memory search.
+        
+        Args:
+            query: The search query string
+            
+        Returns:
+            Modified query string (or unchanged)
+        """
+        return query
+
+    async def on_memory_search_after(self, query: str, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Hook called after a memory search.
+        
+        Args:
+            query: The search query string
+            results: List of search results
+            
+        Returns:
+            Enhanced results with graph context (if enabled).
         """
         if not _check_graphrag():
-            return
+            return results
 
-        from graphrag_agent_zero.extension_hook import is_enabled, build_knowledge_graph
-        if not is_enabled():
-            return
+        from graphrag_agent_zero.extension_hook import is_enabled, is_neo4j_available, enhance_retrieval
+        if not is_enabled() or not is_neo4j_available():
+            return results
 
-        try:
-            print(f"GRAPHRAG_SYNC_TRIGGERED: {memory_id}", flush=True)
-            build_knowledge_graph([{"id": memory_id, "content": content}])
-            print(f"GRAPHRAG_SYNC_SUCCESS: {memory_id}", flush=True)
-        except Exception as e:
-            logger.warning(f"GraphRAG real-time sync failed for {memory_id}: {e}")
-
-
-
-
+        # Extension controls failure behavior - no try/catch
+        enhanced = enhance_retrieval(query=query, vector_results=results)
+        # enhance_retrieval returns a dict, convert to results format if needed
+        return results

@@ -1,0 +1,16 @@
+{
+  "name": "graphrag-agent-zero",
+  "title": "Hybrid GraphRAG for Agent Zero",
+  "description": "Hybrid GraphRAG integration for Agent Zero",
+  "instructions": "",
+  "color": "#9b59b6",
+  "git_url": "https://github.com/AijooseFactory/graphrag-agent-zero",
+  "memory": "own",
+  "file_structure": {
+    "enabled": true,
+    "max_depth": 5,
+    "max_files": 20,
+    "max_folders": 20,
+    "max_lines": 250
+  }
+}
