@@ -21,6 +21,7 @@ Ensure you have a working installation of Agent Zero. If not, you can install it
 Then clone this repository:
 
 ```bash
+### Copy and Paste this in new Agent Zero Chat:
 git clone https://github.com/AijooseFactory/graphrag-agent-zero.git
 cd graphrag-agent-zero
 # Run the installer targeting your local Agent Zero path
